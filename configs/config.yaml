@@ -1,0 +1,34 @@
+env: "dev"
+
+application:
+  app: "merge-store"
+
+public_server:
+  enable: true
+  endpoint: "localhost"
+  port: 8080
+
+admin_server:
+  enable: true
+  endpoint: "localhost"
+  port: 8081
+
+storage:
+  hosts:
+    - "localhost"
+  port: 5432
+  database: "merge-store"
+  username: "champ001"
+  ssl_mode: "disable"
+  connection_attempts: 3
+
+redis:
+  address: "localhost:6379"
+
+jwt:
+  secret_key: ""
+  token_expiry: 3600
+
+users_service:
+  address: "localhost"
+  port: 9080
