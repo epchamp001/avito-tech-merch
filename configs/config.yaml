@@ -8,11 +8,6 @@ public_server:
   endpoint: "localhost"
   port: 8080
 
-admin_server:
-  enable: true
-  endpoint: "localhost"
-  port: 8081
-
 storage:
   hosts:
     - "localhost"
@@ -28,7 +23,3 @@ redis:
 jwt:
   secret_key: ""
   token_expiry: 3600
-
-users_service:
-  address: "localhost"
-  port: 9080
