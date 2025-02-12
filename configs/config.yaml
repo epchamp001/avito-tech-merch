@@ -17,9 +17,6 @@ storage:
   ssl_mode: "disable"
   connection_attempts: 3
 
-redis:
-  address: "localhost:6379"
-
 jwt:
   secret_key: ""
   token_expiry: 3600

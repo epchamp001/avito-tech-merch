@@ -2,9 +2,12 @@ package app
 
 import (
 	"avito-tech-merch/internal/config"
+	database "avito-tech-merch/internal/storage/db"
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"log"
 	"log/slog"
 	"os"
@@ -18,14 +21,22 @@ const (
 func Run(ctx context.Context, cfg *config.Config) {
 	logger := setupLogger(cfg.Env)
 
+	dsn := cfg.Storage.GetDSN()
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		logger.Error("Ошибка подключения к БД", "error", err)
+		log.Fatalf("Ошибка подключения к PostgreSQL: %v\n", err)
+	}
+
+	logger.Info("Успешное подключение к PostgreSQL")
+
+	repo := database.NewPostgresMerchRepository(db)
+
 	router := gin.Default()
+
 	SetupRoutes(router)
 
 	logger.Info("Запуск сервера", "env", cfg.Env, "port", cfg.PublicServer.Port)
-
-	//redisClient := cache.NewRedisClient(ctx, cfg.Redis.Address)
-
-	logger.Info("Подключение к Redis установлено", "address", cfg.Redis.Address)
 
 	address := fmt.Sprintf("%s:%d", cfg.PublicServer.Endpoint, cfg.PublicServer.Port)
 	if err := router.Run(address); err != nil {
