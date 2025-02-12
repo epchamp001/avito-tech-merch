@@ -7,19 +7,19 @@ import (
 	"gorm.io/gorm"
 )
 
-type PostgresPurchaseRepository struct {
+type postgresPurchaseRepository struct {
 	db *gorm.DB
 }
 
-func NewPostgresPurchaseRepository(db *gorm.DB) *PostgresPurchaseRepository {
-	return &PostgresPurchaseRepository{db: db}
+func NewPostgresPurchaseRepository(db *gorm.DB) *postgresPurchaseRepository {
+	return &postgresPurchaseRepository{db: db}
 }
 
-func (r *PostgresPurchaseRepository) CreatePurchase(ctx context.Context, purchase *models.Purchase) error {
+func (r *postgresPurchaseRepository) CreatePurchase(ctx context.Context, purchase *models.Purchase) error {
 	return r.db.WithContext(ctx).Create(purchase).Error
 }
 
-func (r *PostgresPurchaseRepository) GetPurchasesByUser(ctx context.Context, userID uuid.UUID) ([]models.Purchase, error) {
+func (r *postgresPurchaseRepository) GetPurchasesByUser(ctx context.Context, userID uuid.UUID) ([]models.Purchase, error) {
 	var purchases []models.Purchase
 	err := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).

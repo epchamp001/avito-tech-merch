@@ -2,6 +2,7 @@ package app
 
 import (
 	"avito-tech-merch/internal/config"
+	"avito-tech-merch/internal/service"
 	database "avito-tech-merch/internal/storage/db"
 	"context"
 	"fmt"
@@ -31,6 +32,8 @@ func Run(ctx context.Context, cfg *config.Config) {
 	logger.Info("Успешное подключение к PostgreSQL")
 
 	repo := database.NewPostgresMerchRepository(db)
+
+	serv := service.NewService(repo)
 
 	router := gin.Default()
 

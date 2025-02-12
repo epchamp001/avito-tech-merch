@@ -6,17 +6,17 @@ import (
 )
 
 type PostgresRepository struct {
-	*PostgresUserRepository
-	*PostgresMerchRepository
-	*PostgresTransactionRepository
-	*PostgresPurchaseRepository
+	*postgresUserRepository
+	*postgresMerchRepository
+	*postgresTransactionRepository
+	*postgresPurchaseRepository
 }
 
 func NewPostgresRepository(db *gorm.DB) storage.Repository {
 	return &PostgresRepository{
-		PostgresUserRepository:        NewPostgresUserRepository(db),
-		PostgresMerchRepository:       NewPostgresMerchRepository(db),
-		PostgresTransactionRepository: NewPostgresTransactionRepository(db),
-		PostgresPurchaseRepository:    NewPostgresPurchaseRepository(db),
+		postgresUserRepository:        NewPostgresUserRepository(db),
+		postgresMerchRepository:       NewPostgresMerchRepository(db),
+		postgresTransactionRepository: NewPostgresTransactionRepository(db),
+		postgresPurchaseRepository:    NewPostgresPurchaseRepository(db),
 	}
 }

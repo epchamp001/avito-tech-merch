@@ -7,15 +7,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type PostgresUserRepository struct {
+type postgresUserRepository struct {
 	db *gorm.DB
 }
 
-func NewPostgresUserRepository(db *gorm.DB) *PostgresUserRepository {
-	return &PostgresUserRepository{db: db}
+func NewPostgresUserRepository(db *gorm.DB) *postgresUserRepository {
+	return &postgresUserRepository{db: db}
 }
 
-func (r *PostgresUserRepository) CreateUser(ctx context.Context, user *models.User) (uuid.UUID, error) {
+func (r *postgresUserRepository) CreateUser(ctx context.Context, user *models.User) (uuid.UUID, error) {
 	if user.ID == uuid.Nil {
 		user.ID = uuid.New()
 	}
@@ -27,7 +27,7 @@ func (r *PostgresUserRepository) CreateUser(ctx context.Context, user *models.Us
 	return user.ID, nil
 }
 
-func (r *PostgresUserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
+func (r *postgresUserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	var user models.User
 	err := r.db.WithContext(ctx).
 		First(&user, "id = ?", id).
@@ -41,7 +41,7 @@ func (r *PostgresUserRepository) GetUserByID(ctx context.Context, id uuid.UUID) 
 	return &user, nil
 }
 
-func (r *PostgresUserRepository) GetUserByUsername(ctx context.Context, username string) (*models.User, error) {
+func (r *postgresUserRepository) GetUserByUsername(ctx context.Context, username string) (*models.User, error) {
 	var user models.User
 	err := r.db.WithContext(ctx).
 		First(&user, "username = ?", username).
@@ -55,7 +55,7 @@ func (r *PostgresUserRepository) GetUserByUsername(ctx context.Context, username
 	return &user, nil
 }
 
-func (r *PostgresUserRepository) UpdateBalance(ctx context.Context, userID uuid.UUID, newBalance int) error {
+func (r *postgresUserRepository) UpdateBalance(ctx context.Context, userID uuid.UUID, newBalance int) error {
 	err := r.db.WithContext(ctx).
 		Model(&models.User{}).
 		Where("id = ?", userID).
