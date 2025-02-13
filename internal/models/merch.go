@@ -5,3 +5,7 @@ type Merch struct {
 	Name  string `json:"name" gorm:"uniqueIndex;not null"`
 	Price int    `json:"price" gorm:"not null;check:price > 0"`
 }
+
+func (Merch) TableName() string {
+	return "merch"
+}

@@ -12,3 +12,7 @@ type User struct {
 	Balance      int       `json:"balance"  gorm:"not null;default:1000"`
 	CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
+
+func (User) TableName() string {
+	return "users"
+}

@@ -22,6 +22,10 @@ func (s *transactionService) TransferCoins(ctx context.Context, senderID, receiv
 		return errors.New("сумма перевода должна быть положительной")
 	}
 
+	if senderID == receiverID {
+		return errors.New("нельзя отправить монеты самому себе")
+	}
+
 	sender, err := s.userRepo.GetUserByID(ctx, senderID)
 	if err != nil || sender == nil {
 		return errors.New("отправитель не найден")
@@ -47,6 +51,7 @@ func (s *transactionService) TransferCoins(ctx context.Context, senderID, receiv
 		SenderID:   senderID,
 		ReceiverID: receiverID,
 		Amount:     amount,
+		Type:       "transfer",
 	}
 	return s.txRepo.CreateTransaction(ctx, tx)
 }

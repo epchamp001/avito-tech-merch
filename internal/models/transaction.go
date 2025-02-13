@@ -13,3 +13,7 @@ type Transaction struct {
 	Type       string    `json:"type"       gorm:"check:type IN ('initial','transfer','purchase');not null"`
 	CreatedAt  time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
+
+func (Transaction) TableName() string {
+	return "transactions"
+}

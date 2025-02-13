@@ -11,3 +11,7 @@ type Purchase struct {
 	MerchID   int       `json:"merch_id"  gorm:"not null"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
+
+func (Purchase) TableName() string {
+	return "purchases"
+}

@@ -32,7 +32,10 @@ func (r *postgresMerchRepository) GetMerchByID(ctx context.Context, merchID int)
 
 func (r *postgresMerchRepository) GetMerchByName(ctx context.Context, name string) (*models.Merch, error) {
 	var merch models.Merch
-	err := r.db.WithContext(ctx).First(&merch, "name = ?", name).Error
+	err := r.db.WithContext(ctx).
+		Where("LOWER(name) = LOWER(?)", name).
+		First(&merch).
+		Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, nil
 	}
