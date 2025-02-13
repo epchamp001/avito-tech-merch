@@ -2,6 +2,7 @@ package db
 
 import (
 	"avito-tech-merch/internal/models"
+	"avito-tech-merch/internal/storage"
 	"context"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -11,7 +12,7 @@ type postgresUserRepository struct {
 	db *gorm.DB
 }
 
-func NewPostgresUserRepository(db *gorm.DB) *postgresUserRepository {
+func NewPostgresUserRepository(db *gorm.DB) storage.UserRepository {
 	return &postgresUserRepository{db: db}
 }
 

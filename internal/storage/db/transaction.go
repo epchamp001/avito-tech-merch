@@ -2,6 +2,7 @@ package db
 
 import (
 	"avito-tech-merch/internal/models"
+	"avito-tech-merch/internal/storage"
 	"context"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -11,7 +12,7 @@ type postgresTransactionRepository struct {
 	db *gorm.DB
 }
 
-func NewPostgresTransactionRepository(db *gorm.DB) *postgresTransactionRepository {
+func NewPostgresTransactionRepository(db *gorm.DB) storage.TransactionRepository {
 	return &postgresTransactionRepository{db: db}
 }
 

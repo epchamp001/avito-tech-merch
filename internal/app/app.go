@@ -31,7 +31,7 @@ func Run(ctx context.Context, cfg *config.Config) {
 
 	logger.Info("Успешное подключение к PostgreSQL")
 
-	repo := database.NewPostgresMerchRepository(db)
+	repo := database.NewPostgresRepository(db)
 
 	serv := service.NewService(repo)
 

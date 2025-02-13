@@ -8,10 +8,10 @@ type service struct {
 	TransactionService
 }
 
-func NewService(userRepo storage.UserRepository, merchRepo storage.MerchRepository, txRepo storage.TransactionRepository, purchaseRepo storage.PurchaseRepository) Service {
+func NewService(repo storage.Repository) Service {
 	return &service{
-		UserService:        NewUserService(userRepo),
-		MerchService:       NewMerchService(merchRepo, userRepo, purchaseRepo),
-		TransactionService: NewTransactionService(userRepo, txRepo),
+		UserService:        NewUserService(repo),
+		MerchService:       NewMerchService(repo, repo, repo),
+		TransactionService: NewTransactionService(repo, repo),
 	}
 }

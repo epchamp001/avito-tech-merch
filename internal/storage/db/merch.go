@@ -2,6 +2,7 @@ package db
 
 import (
 	"avito-tech-merch/internal/models"
+	"avito-tech-merch/internal/storage"
 	"context"
 	"gorm.io/gorm"
 )
@@ -10,7 +11,7 @@ type postgresMerchRepository struct {
 	db *gorm.DB
 }
 
-func NewPostgresMerchRepository(db *gorm.DB) *postgresMerchRepository {
+func NewPostgresMerchRepository(db *gorm.DB) storage.MerchRepository {
 	return &postgresMerchRepository{db: db}
 }
 
