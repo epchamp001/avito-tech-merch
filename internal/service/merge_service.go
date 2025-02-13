@@ -47,3 +47,7 @@ func (s *merchService) BuyMerch(ctx context.Context, userID uuid.UUID, merchID i
 func (s *merchService) GetUserPurchases(ctx context.Context, userID uuid.UUID) ([]models.Purchase, error) {
 	return s.purchaseRepo.GetPurchasesByUser(ctx, userID)
 }
+
+func (s *merchService) GetMerchByName(ctx context.Context, name string) (*models.Merch, error) {
+	return s.repo.GetMerchByName(ctx, name)
+}

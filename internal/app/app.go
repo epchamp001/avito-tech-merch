@@ -2,6 +2,7 @@ package app
 
 import (
 	"avito-tech-merch/internal/config"
+	"avito-tech-merch/internal/controller/http"
 	"avito-tech-merch/internal/service"
 	database "avito-tech-merch/internal/storage/db"
 	"context"
@@ -35,9 +36,13 @@ func Run(ctx context.Context, cfg *config.Config) {
 
 	serv := service.NewService(repo)
 
+	authController := http.NewAuthController(serv, cfg.JWT.SecretKey)
+	userController := http.NewUserController(serv)
+	merchController := http.NewMerchController(serv)
+
 	router := gin.Default()
 
-	SetupRoutes(router)
+	SetupRoutes(router, authController, userController, merchController, cfg.JWT.SecretKey)
 
 	logger.Info("Запуск сервера", "env", cfg.Env, "port", cfg.PublicServer.Port)
 
