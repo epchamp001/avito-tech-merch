@@ -22,3 +22,16 @@ goose-create:
 # Откатить все миграции и применить заново
 goose-reset:
 	$(GOOSE) -dir ./migrations postgres "$(DB_DSN)" reset
+
+# Docker команды
+build:
+	docker-compose up --build -d
+
+run:
+	docker-compose up -d
+
+stop:
+	docker-compose down
+
+logs:
+	docker-compose logs -f
