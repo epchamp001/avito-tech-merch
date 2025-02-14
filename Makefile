@@ -24,14 +24,26 @@ goose-reset:
 	$(GOOSE) -dir ./migrations postgres "$(DB_DSN)" reset
 
 # Docker команды
+# Собрать Docker-образ
 build:
-	docker-compose up --build -d
+	docker-compose build
 
+# Запустить сервисы
 run:
 	docker-compose up -d
 
+# Остановить сервисы
 stop:
 	docker-compose down
 
+# Логи сервиса
 logs:
-	docker-compose logs -f
+	docker-compose logs -f app
+
+# Применить миграции
+migrate:
+	$(GOOSE) -dir ./migrations postgres "$(DB_DSN)" up
+
+# Полный сброс БД и миграций
+reset-db:
+	docker-compose down -v && docker-compose up -d && sleep 5 && $(GOOSE) -dir ./migrations postgres "$(DB_DSN)" up

@@ -2,37 +2,34 @@ version: "3.8"
 
 services:
   db:
-    image: postgres:15
-    container_name: postgres_db
+    image: postgres:16
+    container_name: avito-merch-db
     restart: always
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: champ001
+      POSTGRES_PASSWORD: 123champ123
+      POSTGRES_DB: merge-store
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+      - db-data:/var/lib/postgresql/data
 
   app:
     build: .
-    container_name: merch_app
+    container_name: avito-merch-app
     restart: always
     depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      CONFIG_PATH: "/configs/config.yaml"
-      ENV_PATH: "/configs/.env"
+      - db
     ports:
       - "8080:8080"
-    entrypoint: >
-      sh -c "goose -dir ./migrations postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable up && ./app"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: champ001
+      DB_PASSWORD: 123champ123
+      DB_NAME: merge-store
+      JWT_SECRET_KEY: "zN1qT3v5PbC+fKmB9pVjQ13O8+wsyxMGj5L9C/wT4lU="
+    command: ["/app/merch-store"]
 
 volumes:
-  postgres_data:
+  db-data:

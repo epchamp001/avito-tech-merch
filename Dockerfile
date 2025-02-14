@@ -1,36 +1,28 @@
-# Используем стабильную версию Go
-FROM golang:1.21-alpine AS builder
+FROM golang:1.23 AS builder
 
 WORKDIR /app
 
-# Устанавливаем необходимые пакеты
-RUN apk add --no-cache git
+ENV GOPROXY=direct
+ENV GOSUMDB=off
 
-# Отключаем прокси и проверку контрольных сумм
-ENV GOPROXY=direct \
-    GOSUMDB=off
-
-# Копируем файлы для загрузки зависимостей
 COPY go.mod go.sum ./
 
-# Загружаем зависимости
-RUN go mod tidy
 RUN go mod download
 
-# Копируем остальной код
 COPY . .
 
-# Собираем бинарник
-RUN go build -o app ./cmd/merch-store/main.go
+RUN go build -o /app/bin/merch-store ./cmd/merch-store/main.go
 
-# Финальный образ
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim AS runtime
 
-WORKDIR /root/
+WORKDIR /app
 
-# Копируем собранное приложение
-COPY --from=builder /app/app .
-COPY --from=builder /app/configs ./configs
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Запускаем приложение
-CMD ["./app"]
+COPY --from=builder /app/bin/merch-store /app/merch-store
+
+COPY configs /app/configs
+
+EXPOSE 8080
+
+CMD ["/app/merch-store"]
