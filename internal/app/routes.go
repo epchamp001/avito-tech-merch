@@ -15,7 +15,7 @@ func SetupRoutes(router *gin.Engine, auth http.AuthController, user http.UserCon
 		{
 			protected.GET("/info", user.GetUserInfo)
 			protected.POST("/sendCoin", user.TransferCoins)
-			protected.GET("/buy/:item", merch.BuyMerch)
+			protected.POST("/buy/:item", merch.BuyMerch)
 		}
 	}
 }
