@@ -15,6 +15,7 @@ goose-down:
 goose-status:
 	$(GOOSE) -dir ./migrations postgres "$(DB_DSN)" status
 
+
 # Создать новую миграцию
 goose-create:
 	$(GOOSE) -dir ./migrations create $(name) sql
@@ -22,28 +23,3 @@ goose-create:
 # Откатить все миграции и применить заново
 goose-reset:
 	$(GOOSE) -dir ./migrations postgres "$(DB_DSN)" reset
-
-# Docker команды
-# Собрать Docker-образ
-build:
-	docker-compose build
-
-# Запустить сервисы
-run:
-	docker-compose up -d
-
-# Остановить сервисы
-stop:
-	docker-compose down
-
-# Логи сервиса
-logs:
-	docker-compose logs -f app
-
-# Применить миграции
-migrate:
-	$(GOOSE) -dir ./migrations postgres "$(DB_DSN)" up
-
-# Полный сброс БД и миграций
-reset-db:
-	docker-compose down -v && docker-compose up -d && sleep 5 && $(GOOSE) -dir ./migrations postgres "$(DB_DSN)" up
