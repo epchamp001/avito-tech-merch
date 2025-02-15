@@ -6,6 +6,7 @@ services:
     container_name: postgres_merch
     restart: always
     environment:
+      DB_HOST: "db"
       POSTGRES_DB: merge-store
       POSTGRES_USER: champ001
       POSTGRES_PASSWORD: ${DB_PASSWORD}

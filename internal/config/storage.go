@@ -6,7 +6,7 @@ import (
 )
 
 type StorageConfig struct {
-	Hosts                 []string      `yaml:"hosts"`
+	Hosts                 []string      `yaml:"hosts" env:"DB_HOST"`
 	Port                  int           `yaml:"port"`
 	Database              string        `yaml:"database"`
 	Username              string        `yaml:"username"`
