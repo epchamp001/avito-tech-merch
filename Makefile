@@ -23,3 +23,29 @@ goose-create:
 # Откатить все миграции и применить заново
 goose-reset:
 	$(GOOSE) -dir ./migrations postgres "$(DB_DSN)" reset
+
+# Собрать Docker-контейнеры без запуска
+build:
+	docker-compose build --no-cache
+
+# Запуск приложения в Docker
+docker-up:
+	docker-compose up -d
+
+# Остановка и удаление контейнеров
+docker-down:
+	docker-compose down
+
+# Пересборка и запуск контейнеров
+docker-rebuild:
+	docker-compose down
+	docker-compose build
+	docker-compose up -d
+
+# Просмотр логов приложения
+docker-logs:
+	docker-compose logs -f app
+
+# Просмотр логов базы данных
+docker-logs-db:
+	docker-compose logs -f db
