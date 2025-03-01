@@ -1,0 +1,37 @@
+env: "dev"
+
+application:
+  app: "merge-store"
+
+public_server:
+  enable: true
+  endpoint: "0.0.0.0"
+  port: 8080
+
+storage:
+  postgres:
+    hosts:
+      - "${DB_HOST}"
+    port: 5432
+    database: "merge-store"
+    username: "champ001"
+    password: "${DB_PASSWORD}"
+    ssl_mode: "disable"
+    connection_attempts: 3
+    pool:
+      max_connections: 10
+      min_connections: 2
+      max_lifetime: 3600
+      max_idle_time: 300
+      health_check_period: 30
+
+  redis:
+    host: "${REDIS_HOST}"
+    port: 6379
+    password: "${REDIS_PASSWORD}"
+    db: 0
+
+jwt:
+  secret_key: "${JWT_SECRET_KEY}"
+  token_expiry: 86400
+  
