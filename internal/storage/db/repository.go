@@ -3,6 +3,7 @@ package db
 import (
 	"avito-tech-merch/internal/models"
 	"context"
+	"github.com/jackc/pgx/v5"
 )
 
 type Repository interface {
@@ -10,6 +11,7 @@ type Repository interface {
 	MerchRepository
 	PurchaseRepository
 	TransactionRepository
+	TxManager
 }
 
 type UserRepository interface {
@@ -39,11 +41,18 @@ type TransactionRepository interface {
 	GetTransactionByUserID(ctx context.Context, userID int) ([]*models.Transaction, error)
 }
 
+type TxManager interface {
+	BeginTx(ctx context.Context) (pgx.Tx, error)
+	CommitTx(ctx context.Context, tx pgx.Tx) error
+	RollbackTx(ctx context.Context, tx pgx.Tx) error
+}
+
 type postgresRepository struct {
 	UserRepository
 	MerchRepository
 	PurchaseRepository
 	TransactionRepository
+	TxManager
 }
 
 func NewRepository(
@@ -51,11 +60,13 @@ func NewRepository(
 	merchRepo MerchRepository,
 	purchaseRepo PurchaseRepository,
 	transactionRepo TransactionRepository,
+	txManager TxManager,
 ) Repository {
 	return &postgresRepository{
 		UserRepository:        userRepo,
 		MerchRepository:       merchRepo,
 		PurchaseRepository:    purchaseRepo,
 		TransactionRepository: transactionRepo,
+		TxManager:             txManager,
 	}
 }

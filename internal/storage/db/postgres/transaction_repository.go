@@ -20,13 +20,13 @@ func NewTransactionRepository(pool *pgxpool.Pool, log logger.Logger) db.Transact
 
 func (r *postgresTransactionRepository) CreateTransaction(ctx context.Context, transaction *models.Transaction) (int, error) {
 	query := `
-        INSERT INTO transactions (sender_id, receiver_id, amount, type)
+        INSERT INTO transactions (sender_id, receiver_id, amount, created_at)
         VALUES ($1, $2, $3, $4)
         RETURNING id
     `
 
 	var transactionID int
-	err := r.pool.QueryRow(ctx, query, transaction.SenderID, transaction.ReceiverID, transaction.Amount, transaction.Type).Scan(&transactionID)
+	err := r.pool.QueryRow(ctx, query, transaction.SenderID, transaction.ReceiverID, transaction.Amount, transaction.CreatedAt).Scan(&transactionID)
 	if err != nil {
 		r.logger.Errorw("Error creating transaction",
 			"error", err,
@@ -41,7 +41,7 @@ func (r *postgresTransactionRepository) CreateTransaction(ctx context.Context, t
 
 func (r *postgresTransactionRepository) GetTransactionByUserID(ctx context.Context, userID int) ([]*models.Transaction, error) {
 	query := `
-        SELECT id, sender_id, receiver_id, amount, type, created_at
+        SELECT id, sender_id, receiver_id, amount, created_at
         FROM transactions
         WHERE sender_id = $1 OR receiver_id = $1
     `
@@ -64,7 +64,6 @@ func (r *postgresTransactionRepository) GetTransactionByUserID(ctx context.Conte
 			&transaction.SenderID,
 			&transaction.ReceiverID,
 			&transaction.Amount,
-			&transaction.Type,
 			&transaction.CreatedAt,
 		)
 		if err != nil {
