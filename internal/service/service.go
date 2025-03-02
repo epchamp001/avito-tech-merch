@@ -29,7 +29,7 @@ type MerchService interface {
 }
 
 type PurchaseService interface {
-	PurchaseMerch(ctx context.Context, userID int, merchID int) error
+	PurchaseMerch(ctx context.Context, userID int, merchName string) error
 }
 
 type TransactionService interface {

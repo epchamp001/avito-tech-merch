@@ -18,14 +18,14 @@ func NewPurchaseService(repo db.Repository, log logger.Logger) *purchaseService 
 	return &purchaseService{repo: repo, logger: log}
 }
 
-func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchID int) error {
-	merch, err := s.repo.GetMerchByID(ctx, userID)
+func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchName string) error {
+	merch, err := s.repo.GetMerchByName(ctx, merchName)
 	if err != nil {
 		s.logger.Errorw("Failed to get merch",
-			"merchID", merchID,
+			"merchName", merchName,
 			"error", err,
 		)
-		return err
+		return fmt.Errorf("failed to get merch: %w", err)
 	}
 
 	balance, err := s.repo.GetBalanceByID(ctx, userID)
@@ -50,7 +50,7 @@ func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchID
 	if err != nil {
 		s.logger.Errorw("Failed to begin transaction",
 			"userID", userID,
-			"merchID", merchID,
+			"merchName", merchName,
 			"error", err,
 		)
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -60,7 +60,7 @@ func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchID
 			if rollbackErr := s.repo.RollbackTx(ctx, tx); rollbackErr != nil {
 				s.logger.Errorw("Failed to rollback transaction",
 					"userID", userID,
-					"merchID", merchID,
+					"merchName", merchName,
 					"error", rollbackErr,
 				)
 			}
@@ -79,14 +79,14 @@ func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchID
 
 	purchase := &models.Purchase{
 		UserID:    userID,
-		MerchID:   merchID,
+		MerchID:   merch.ID,
 		CreatedAt: time.Now(),
 	}
 
 	if _, err := s.repo.CreatePurchase(ctx, purchase); err != nil {
 		s.logger.Errorw("Failed to create purchase",
 			"userID", userID,
-			"merchID", merchID,
+			"merchName", merchName,
 			"error", err,
 		)
 		return fmt.Errorf("failed to create purchase: %w", err)
@@ -95,7 +95,7 @@ func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchID
 	if err := s.repo.CommitTx(ctx, tx); err != nil {
 		s.logger.Errorw("Failed to commit transaction",
 			"userID", userID,
-			"merchID", merchID,
+			"merchName", merchName,
 			"error", err,
 		)
 		return fmt.Errorf("failed to commit transaction: %w", err)
