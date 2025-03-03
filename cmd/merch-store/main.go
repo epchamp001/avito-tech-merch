@@ -1,28 +1,68 @@
 package main
 
 import (
+	_ "avito-tech-merch/cmd/merch-store/docs"
+	"avito-tech-merch/internal/app"
 	"avito-tech-merch/internal/config"
 	"avito-tech-merch/pkg/logger"
-	"fmt"
-	"go.uber.org/zap"
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
+// @title Merch Store
+// @version 1.0
+// @description This is a service that will allow employees to exchange coins and purchase merch with them.
+
+// @contact.name Egor Ponyaev
+// @contact.url https://github.com/epchamp001
+// @contact.email epchamp001@gmail.com
+
+// @license.name MIT
+
+// @host localhost:8080
+// @BasePath /api
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
-	log := logger.NewLogger()
+	ctx, stop := signal.NotifyContext(context.Background(),
+		os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
+
+	cfg, err := config.LoadConfig("configs/", ".env")
+	if err != nil {
+		panic(err)
+	}
+
+	log := logger.NewLogger(cfg.Env)
 	defer log.Sync()
 
-	cfg, err := config.LoadConfig("configs/", ".env", log)
-	if err != nil {
-		log.Error("Failed to load config", zap.Error(err))
+	server := app.NewServer(cfg, log)
+
+	if err := server.Run(); err != nil {
+		log.Fatalw("Failed to start server",
+			"error", err,
+		)
 	}
 
-	fmt.Printf("%+v\n", cfg)
+	<-ctx.Done()
 
-	pool, err := cfg.Storage.ConnectionToPostgres(log)
-	if err != nil {
-		log.Fatal("Failed to connect to postgres", zap.Error(err))
+	shutdownCtx, cancel := context.WithTimeout(
+		context.Background(),
+		time.Duration(cfg.PublicServer.ShutdownTimeout)*time.Second,
+	)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Errorw("Shutdown failed",
+			"error", err,
+		)
+		os.Exit(1)
 	}
-	defer pool.Close()
-	log.Info("Successfully connected to PostgreSQL!")
 
+	log.Info("Application stopped gracefully")
 }

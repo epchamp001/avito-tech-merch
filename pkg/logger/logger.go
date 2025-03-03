@@ -24,11 +24,23 @@ type ZapLogger struct {
 	sugar  *zap.SugaredLogger
 }
 
-func NewLogger() Logger {
-	config := zap.NewDevelopmentConfig()
-	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	config.EncoderConfig.TimeKey = "timestamp"
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+func NewLogger(mode string) Logger {
+	var config zap.Config
+
+	switch mode {
+	case "dev":
+		config = zap.NewDevelopmentConfig()
+		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		config.EncoderConfig.TimeKey = "timestamp"
+		config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	case "prod":
+		config = zap.NewProductionConfig()
+		config.EncoderConfig.EncodeLevel = zapcore.LowercaseLevelEncoder
+		config.EncoderConfig.TimeKey = "timestamp"
+		config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	default:
+		panic("unknown log mode")
+	}
 
 	logger, err := config.Build()
 	if err != nil {

@@ -1,11 +1,9 @@
 package config
 
 import (
-	"avito-tech-merch/pkg/logger"
 	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -16,10 +14,10 @@ type Config struct {
 	JWT          JWTConfig          `mapstructure:"jwt"`
 }
 
-func LoadConfig(configPath, envPath string, logger logger.Logger) (*Config, error) {
+func LoadConfig(configPath, envPath string) (*Config, error) {
 	err := godotenv.Load(envPath)
 	if err != nil {
-		logger.Warn("Error loading .env file", zap.String("path", envPath), zap.Error(err))
+		return nil, fmt.Errorf("error loading .env file from %s: %v", envPath, err)
 	}
 
 	viper.SetConfigName("config")
@@ -28,7 +26,6 @@ func LoadConfig(configPath, envPath string, logger logger.Logger) (*Config, erro
 
 	err = viper.ReadInConfig()
 	if err != nil {
-		logger.Error("Error reading config file", zap.String("path", configPath), zap.Error(err))
 		return nil, fmt.Errorf("error reading config file from %s: %v", configPath, err)
 	}
 
@@ -43,7 +40,6 @@ func LoadConfig(configPath, envPath string, logger logger.Logger) (*Config, erro
 	var config Config
 	err = viper.Unmarshal(&config)
 	if err != nil {
-		logger.Error("Unable to decode config into struct", zap.Error(err))
 		return nil, fmt.Errorf("unable to decode into struct: %v", err)
 	}
 
