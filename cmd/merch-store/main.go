@@ -1,7 +1,7 @@
 package main
 
 import (
-	_ "avito-tech-merch/cmd/merch-store/docs"
+	_ "avito-tech-merch/docs"
 	"avito-tech-merch/internal/app"
 	"avito-tech-merch/internal/config"
 	"avito-tech-merch/pkg/logger"
@@ -25,9 +25,10 @@ import (
 // @host localhost:8080
 // @BasePath /api
 
-// @securityDefinitions.apikey BearerAuth
+// @securityDefinitions.apikey JWT
 // @in header
 // @name Authorization
+// @description JWT token
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(),
 		os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)

@@ -22,7 +22,7 @@ func setupRoutes(router *gin.Engine, controller controller.Controller, authServi
 		protected.Use(authMiddleware)
 		{
 			protected.GET("/info", controller.GetInfo)
-			protected.POST("/sendCoin", controller.SendCoin)
+			protected.POST("/send-coin", controller.SendCoin)
 			protected.GET("/merch", controller.ListMerch)
 			protected.POST("/merch/buy/:item", controller.BuyMerch)
 		}

@@ -7,7 +7,7 @@ import (
 
 func ParseJWTToken(tokenString, secretKey string) (int, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return secretKey, nil
+		return []byte(secretKey), nil
 	})
 
 	if err != nil {

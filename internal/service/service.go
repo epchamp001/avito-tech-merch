@@ -20,7 +20,7 @@ type AuthService interface {
 }
 
 type UserService interface {
-	GetInfo(ctx context.Context, userID int) (*models.UserInfoResponse, error)
+	GetInfo(ctx context.Context, userID int) (*models.UserInfo, error)
 }
 
 type MerchService interface {

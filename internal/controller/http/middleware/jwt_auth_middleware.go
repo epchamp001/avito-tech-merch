@@ -4,6 +4,7 @@ import (
 	"avito-tech-merch/internal/service"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strings"
 )
 
 func JWTAuthMiddleware(authService service.AuthService) gin.HandlerFunc {
@@ -15,6 +16,8 @@ func JWTAuthMiddleware(authService service.AuthService) gin.HandlerFunc {
 			return
 		}
 
+		token = strings.TrimPrefix(token, "Bearer ")
+		
 		userID, err := authService.ValidateToken(token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})

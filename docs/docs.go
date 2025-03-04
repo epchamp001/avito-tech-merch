@@ -21,9 +21,501 @@ const docTemplate = `{
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {},
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "description": "Login a user with username and password, returns a JWT token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login a user",
+                "parameters": [
+                    {
+                        "description": "User login data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JWT token",
+                        "schema": {
+                            "$ref": "#/definitions/dto.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse400"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponseInvalidCredentials401"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "description": "Register a new user with username and password, returns a JWT token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Register a new user",
+                "parameters": [
+                    {
+                        "description": "User registration data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JWT token",
+                        "schema": {
+                            "$ref": "#/definitions/dto.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse400"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse500"
+                        }
+                    }
+                }
+            }
+        },
+        "/info": {
+            "get": {
+                "description": "Fetches user information based on the userID from the context",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Get user information",
+                "responses": {
+                    "200": {
+                        "description": "User information",
+                        "schema": {
+                            "$ref": "#/definitions/dto.UserInfoResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponseUnauthorized401"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse500"
+                        }
+                    }
+                }
+            }
+        },
+        "/merch": {
+            "get": {
+                "description": "Fetches all merch items from the database and returns a list of merch",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "merch"
+                ],
+                "summary": "Get list of merchandise items",
+                "responses": {
+                    "200": {
+                        "description": "List of merchandise items",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.MerchDTO"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse500"
+                        }
+                    }
+                }
+            }
+        },
+        "/merch/buy/:item": {
+            "post": {
+                "description": "Allows a user to purchase a merchandise item by specifying the item ID in the URL",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchase"
+                ],
+                "summary": "Purchase a merchandise item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Item ID to purchase",
+                        "name": "item",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Purchase successful",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PurchaseSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request (item is required)",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse400"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponseUnauthorized401"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse500"
+                        }
+                    }
+                }
+            }
+        },
+        "/send-coin": {
+            "post": {
+                "description": "Allows a user to send coins to another user by specifying the receiver ID and the amount",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transaction"
+                ],
+                "summary": "Transfer coins between users",
+                "parameters": [
+                    {
+                        "description": "Receiver user ID",
+                        "name": "receiver_id",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "description": "Amount of coins to transfer",
+                        "name": "amount",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Coins transferred successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TransferSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request (missing or invalid data)",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse400"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponseUnauthorized401"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse500"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dto.AuthResponse": {
+            "description": "Response containing JWT token",
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Njg5NTEwMTcsInN1YiI6ImpvaG5AZG9lLmNvbSJ9.Q3k6yMFYtuzPyjoZYpIHibJQPey29QWmlHfwS2A3keM"
+                }
+            }
+        },
+        "dto.ErrorResponse400": {
+            "description": "The standard API error format for 400 Bad Request",
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 400
+                },
+                "message": {
+                    "type": "string",
+                    "example": "invalid request"
+                }
+            }
+        },
+        "dto.ErrorResponse500": {
+            "description": "The standard API error format for 500 Internal Server Error",
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 500
+                },
+                "message": {
+                    "type": "string",
+                    "example": "server error"
+                }
+            }
+        },
+        "dto.ErrorResponseInvalidCredentials401": {
+            "description": "The standard API error format for 401 Unauthorized (invalid credentials)",
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 401
+                },
+                "message": {
+                    "type": "string",
+                    "example": "invalid credentials"
+                }
+            }
+        },
+        "dto.ErrorResponseUnauthorized401": {
+            "description": "The standard API error format for 401 Unauthorized (general unauthorized error)",
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 401
+                },
+                "message": {
+                    "type": "string",
+                    "example": "unauthorized"
+                }
+            }
+        },
+        "dto.LoginRequest": {
+            "description": "Data for user login",
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "strongpassword123"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "epchamp001"
+                }
+            }
+        },
+        "dto.MerchDTO": {
+            "description": "DTO representing merch information",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "name": {
+                    "type": "string",
+                    "example": "cup"
+                },
+                "price": {
+                    "type": "integer",
+                    "example": 20
+                }
+            }
+        },
+        "dto.PurchaseDTO": {
+            "description": "DTO representing purchase information",
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-02-15T10:00:00"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "merch_id": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "user_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "dto.PurchaseSuccessResponse": {
+            "description": "Response indicating that the purchase was successful",
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "purchase successful"
+                }
+            }
+        },
+        "dto.RegisterRequest": {
+            "description": "Data for creating a new user",
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "strongpassword123"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "epchamp001"
+                }
+            }
+        },
+        "dto.TransactionDTO": {
+            "description": "DTO representing transaction information",
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-02-16T14:30:00"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "receiver_id": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "sender_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "dto.TransferSuccessResponse": {
+            "description": "Response indicating that the coin transfer was successful",
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "coins transferred successfully"
+                }
+            }
+        },
+        "dto.UserInfoResponse": {
+            "description": "Response containing user information",
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer",
+                    "example": 1500
+                },
+                "purchases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PurchaseDTO"
+                    }
+                },
+                "transactions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.TransactionDTO"
+                    }
+                },
+                "user_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "username": {
+                    "type": "string",
+                    "example": "epchamp001"
+                }
+            }
+        }
+    },
     "securityDefinitions": {
-        "BearerAuth": {
+        "JWT": {
+            "description": "JWT token",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"

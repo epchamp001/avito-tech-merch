@@ -1,4 +1,162 @@
 basePath: /api
+definitions:
+  dto.AuthResponse:
+    description: Response containing JWT token
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Njg5NTEwMTcsInN1YiI6ImpvaG5AZG9lLmNvbSJ9.Q3k6yMFYtuzPyjoZYpIHibJQPey29QWmlHfwS2A3keM
+        type: string
+    type: object
+  dto.ErrorResponse400:
+    description: The standard API error format for 400 Bad Request
+    properties:
+      code:
+        example: 400
+        type: integer
+      message:
+        example: invalid request
+        type: string
+    type: object
+  dto.ErrorResponse500:
+    description: The standard API error format for 500 Internal Server Error
+    properties:
+      code:
+        example: 500
+        type: integer
+      message:
+        example: server error
+        type: string
+    type: object
+  dto.ErrorResponseInvalidCredentials401:
+    description: The standard API error format for 401 Unauthorized (invalid credentials)
+    properties:
+      code:
+        example: 401
+        type: integer
+      message:
+        example: invalid credentials
+        type: string
+    type: object
+  dto.ErrorResponseUnauthorized401:
+    description: The standard API error format for 401 Unauthorized (general unauthorized
+      error)
+    properties:
+      code:
+        example: 401
+        type: integer
+      message:
+        example: unauthorized
+        type: string
+    type: object
+  dto.LoginRequest:
+    description: Data for user login
+    properties:
+      password:
+        example: strongpassword123
+        type: string
+      username:
+        example: epchamp001
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  dto.MerchDTO:
+    description: DTO representing merch information
+    properties:
+      id:
+        example: 2
+        type: integer
+      name:
+        example: cup
+        type: string
+      price:
+        example: 20
+        type: integer
+    type: object
+  dto.PurchaseDTO:
+    description: DTO representing purchase information
+    properties:
+      created_at:
+        example: 2025-02-15T10:00:00
+        type: string
+      id:
+        example: 1
+        type: integer
+      merch_id:
+        example: 3
+        type: integer
+      user_id:
+        example: 1
+        type: integer
+    type: object
+  dto.PurchaseSuccessResponse:
+    description: Response indicating that the purchase was successful
+    properties:
+      message:
+        example: purchase successful
+        type: string
+    type: object
+  dto.RegisterRequest:
+    description: Data for creating a new user
+    properties:
+      password:
+        example: strongpassword123
+        type: string
+      username:
+        example: epchamp001
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  dto.TransactionDTO:
+    description: DTO representing transaction information
+    properties:
+      amount:
+        example: 200
+        type: integer
+      created_at:
+        example: 2025-02-16T14:30:00
+        type: string
+      id:
+        example: 1
+        type: integer
+      receiver_id:
+        example: 2
+        type: integer
+      sender_id:
+        example: 1
+        type: integer
+    type: object
+  dto.TransferSuccessResponse:
+    description: Response indicating that the coin transfer was successful
+    properties:
+      message:
+        example: coins transferred successfully
+        type: string
+    type: object
+  dto.UserInfoResponse:
+    description: Response containing user information
+    properties:
+      balance:
+        example: 1500
+        type: integer
+      purchases:
+        items:
+          $ref: '#/definitions/dto.PurchaseDTO'
+        type: array
+      transactions:
+        items:
+          $ref: '#/definitions/dto.TransactionDTO'
+        type: array
+      user_id:
+        example: 1
+        type: integer
+      username:
+        example: epchamp001
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -11,9 +169,190 @@ info:
     name: MIT
   title: Merch Store
   version: "1.0"
-paths: {}
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login a user with username and password, returns a JWT token
+      parameters:
+      - description: User login data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JWT token
+          schema:
+            $ref: '#/definitions/dto.AuthResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse400'
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/dto.ErrorResponseInvalidCredentials401'
+      summary: Login a user
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with username and password, returns a JWT token
+      parameters:
+      - description: User registration data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JWT token
+          schema:
+            $ref: '#/definitions/dto.AuthResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse400'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse500'
+      summary: Register a new user
+      tags:
+      - auth
+  /info:
+    get:
+      consumes:
+      - application/json
+      description: Fetches user information based on the userID from the context
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User information
+          schema:
+            $ref: '#/definitions/dto.UserInfoResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponseUnauthorized401'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse500'
+      summary: Get user information
+      tags:
+      - user
+  /merch:
+    get:
+      consumes:
+      - application/json
+      description: Fetches all merch items from the database and returns a list of
+        merch
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of merchandise items
+          schema:
+            items:
+              $ref: '#/definitions/dto.MerchDTO'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse500'
+      summary: Get list of merchandise items
+      tags:
+      - merch
+  /merch/buy/:item:
+    post:
+      consumes:
+      - application/json
+      description: Allows a user to purchase a merchandise item by specifying the
+        item ID in the URL
+      parameters:
+      - description: Item ID to purchase
+        in: path
+        name: item
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Purchase successful
+          schema:
+            $ref: '#/definitions/dto.PurchaseSuccessResponse'
+        "400":
+          description: Bad request (item is required)
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse400'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponseUnauthorized401'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse500'
+      summary: Purchase a merchandise item
+      tags:
+      - purchase
+  /send-coin:
+    post:
+      consumes:
+      - application/json
+      description: Allows a user to send coins to another user by specifying the receiver
+        ID and the amount
+      parameters:
+      - description: Receiver user ID
+        in: body
+        name: receiver_id
+        required: true
+        schema:
+          type: integer
+      - description: Amount of coins to transfer
+        in: body
+        name: amount
+        required: true
+        schema:
+          type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Coins transferred successfully
+          schema:
+            $ref: '#/definitions/dto.TransferSuccessResponse'
+        "400":
+          description: Invalid request (missing or invalid data)
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse400'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponseUnauthorized401'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse500'
+      summary: Transfer coins between users
+      tags:
+      - transaction
 securityDefinitions:
-  BearerAuth:
+  JWT:
+    description: JWT token
     in: header
     name: Authorization
     type: apiKey

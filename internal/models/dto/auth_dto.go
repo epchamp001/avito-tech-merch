@@ -1,5 +1,7 @@
 package dto
 
+// AuthRequest The structure of user credentials
+// @Description Data for login or registration
 type AuthRequest struct {
 	Username string `json:"username" binding:"required" example:"epchamp001"`
 	Password string `json:"password" binding:"required" example:"strongpassword123"`
@@ -12,22 +14,15 @@ type RegisterRequest struct {
 	Password string `json:"password" binding:"required" example:"strongpassword123"`
 }
 
-// LoginRequest Authentication Request
-// @Description Login information
+// LoginRequest Login request
+// @Description Data for user login
 type LoginRequest struct {
 	Username string `json:"username" binding:"required" example:"epchamp001"`
 	Password string `json:"password" binding:"required" example:"strongpassword123"`
 }
 
-// AuthResponse Successful response with a token
-// @Description Contains a JWT token for authentication
+// AuthResponse Response for successful authentication or registration
+// @Description Response containing JWT token
 type AuthResponse struct {
 	Token string `json:"token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Njg5NTEwMTcsInN1YiI6ImpvaG5AZG9lLmNvbSJ9.Q3k6yMFYtuzPyjoZYpIHibJQPey29QWmlHfwS2A3keM"`
-}
-
-// ErrorResponse Response with an error
-// @Description The standard API error format
-type ErrorResponse struct {
-	Code    int    `json:"code" example:"400"`
-	Message string `json:"message" example:"invalid request"`
 }

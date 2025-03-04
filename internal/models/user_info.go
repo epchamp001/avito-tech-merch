@@ -1,6 +1,7 @@
 package models
 
-type UserInfoResponse struct {
+type UserInfo struct {
+	UserID       int            `json:"user_id"`
 	Username     string         `json:"username"`
 	Balance      int            `json:"balance"`
 	Purchases    []*Purchase    `json:"purchases"`

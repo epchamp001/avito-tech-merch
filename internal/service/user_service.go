@@ -16,7 +16,7 @@ func NewUserService(repo db.Repository, log logger.Logger) UserService {
 	return &userService{repo: repo, logger: log}
 }
 
-func (s *userService) GetInfo(ctx context.Context, userID int) (*models.UserInfoResponse, error) {
+func (s *userService) GetInfo(ctx context.Context, userID int) (*models.UserInfo, error) {
 	user, err := s.repo.GetUserByID(ctx, userID)
 	if err != nil {
 		s.logger.Errorw("Failed to get user info",
@@ -44,7 +44,8 @@ func (s *userService) GetInfo(ctx context.Context, userID int) (*models.UserInfo
 		return nil, err
 	}
 
-	response := &models.UserInfoResponse{
+	response := &models.UserInfo{
+		UserID:       user.ID,
 		Username:     user.Username,
 		Balance:      user.Balance,
 		Purchases:    purchases,
