@@ -21,8 +21,7 @@ func NewTransactionController(service service.Service) TransactionController {
 // @Tags transaction
 // @Accept  json
 // @Produce  json
-// @Param receiver_id body int true "Receiver user ID" example:"2"
-// @Param amount body int true "Amount of coins to transfer" example:"100"
+// @Param request body dto.TransferRequest true "Transfer request data"
 // @Success 200 {object} dto.TransferSuccessResponse "Coins transferred successfully"
 // @Failure 400 {object} dto.ErrorResponse400 "Invalid request (missing or invalid data)"
 // @Failure 401 {object} dto.ErrorResponseUnauthorized401 "Unauthorized"

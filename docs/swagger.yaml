@@ -129,6 +129,19 @@ definitions:
         example: 1
         type: integer
     type: object
+  dto.TransferRequest:
+    description: Data for transferring coins between users
+    properties:
+      amount:
+        example: 100
+        type: integer
+      receiver_id:
+        example: 2
+        type: integer
+    required:
+    - amount
+    - receiver_id
+    type: object
   dto.TransferSuccessResponse:
     description: Response indicating that the coin transfer was successful
     properties:
@@ -316,18 +329,12 @@ paths:
       description: Allows a user to send coins to another user by specifying the receiver
         ID and the amount
       parameters:
-      - description: Receiver user ID
+      - description: Transfer request data
         in: body
-        name: receiver_id
+        name: request
         required: true
         schema:
-          type: integer
-      - description: Amount of coins to transfer
-        in: body
-        name: amount
-        required: true
-        schema:
-          type: integer
+          $ref: '#/definitions/dto.TransferRequest'
       produces:
       - application/json
       responses:

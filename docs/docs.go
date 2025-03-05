@@ -246,21 +246,12 @@ const docTemplate = `{
                 "summary": "Transfer coins between users",
                 "parameters": [
                     {
-                        "description": "Receiver user ID",
-                        "name": "receiver_id",
+                        "description": "Transfer request data",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "description": "Amount of coins to transfer",
-                        "name": "amount",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
+                            "$ref": "#/definitions/dto.TransferRequest"
                         }
                     }
                 ],
@@ -469,6 +460,24 @@ const docTemplate = `{
                 "sender_id": {
                     "type": "integer",
                     "example": 1
+                }
+            }
+        },
+        "dto.TransferRequest": {
+            "description": "Data for transferring coins between users",
+            "type": "object",
+            "required": [
+                "amount",
+                "receiver_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "example": 100
+                },
+                "receiver_id": {
+                    "type": "integer",
+                    "example": 2
                 }
             }
         },

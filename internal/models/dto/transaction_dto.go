@@ -15,6 +15,13 @@ type TransactionDTO struct {
 	CreatedAt  time.Time `json:"created_at" example:"2025-02-16T14:30:00"`
 }
 
+// TransferRequest DTO for transferring coins
+// @Description Data for transferring coins between users
+type TransferRequest struct {
+	ReceiverID int `json:"receiver_id" binding:"required" example:"2"`
+	Amount     int `json:"amount" binding:"required" example:"100"`
+}
+
 // TransferSuccessResponse DTO for successful coin transfer response
 // @Description Response indicating that the coin transfer was successful
 type TransferSuccessResponse struct {
