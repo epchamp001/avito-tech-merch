@@ -36,6 +36,7 @@ func (s *transactionService) TransferCoins(ctx context.Context, senderID int, re
 		return fmt.Errorf("cannot transfer to yourself")
 	}
 
+	var err error
 	senderBalance, err := s.repo.GetBalanceByID(ctx, senderID)
 	if err != nil {
 		s.logger.Errorw("Failed to get sender balance",
@@ -87,7 +88,7 @@ func (s *transactionService) TransferCoins(ctx context.Context, senderID int, re
 	}()
 
 	newSenderBalance := senderBalance - amount
-	if err := s.repo.UpdateBalance(ctx, senderID, newSenderBalance); err != nil {
+	if err = s.repo.UpdateBalance(ctx, senderID, newSenderBalance); err != nil {
 		s.logger.Errorw("Failed to update sender balance",
 			"senderID", senderID,
 			"newBalance", newSenderBalance,
@@ -97,7 +98,7 @@ func (s *transactionService) TransferCoins(ctx context.Context, senderID int, re
 	}
 
 	newReceiverBalance := receiverBalance + amount
-	if err := s.repo.UpdateBalance(ctx, receiverID, newReceiverBalance); err != nil {
+	if err = s.repo.UpdateBalance(ctx, receiverID, newReceiverBalance); err != nil {
 		s.logger.Errorw("Failed to update receiver balance",
 			"receiverID", receiverID,
 			"newBalance", newReceiverBalance,
@@ -113,7 +114,7 @@ func (s *transactionService) TransferCoins(ctx context.Context, senderID int, re
 		CreatedAt:  time.Now(),
 	}
 
-	if _, err := s.repo.CreateTransaction(ctx, transaction); err != nil {
+	if _, err = s.repo.CreateTransaction(ctx, transaction); err != nil {
 		s.logger.Errorw("Failed to create transaction",
 			"senderID", senderID,
 			"receiverID", receiverID,
@@ -123,7 +124,7 @@ func (s *transactionService) TransferCoins(ctx context.Context, senderID int, re
 		return fmt.Errorf("failed to create transaction: %w", err)
 	}
 
-	if err := s.repo.CommitTx(ctx, tx); err != nil {
+	if err = s.repo.CommitTx(ctx, tx); err != nil {
 		s.logger.Errorw("Failed to commit transaction",
 			"senderID", senderID,
 			"receiverID", receiverID,

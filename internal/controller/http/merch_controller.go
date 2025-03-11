@@ -36,5 +36,5 @@ func (c *merchController) ListMerch(ctx *gin.Context) {
 		merchListDTO[i] = dto.MapMerchToDTO(merch)
 	}
 
-	ctx.JSON(http.StatusOK, merchList)
+	ctx.JSON(http.StatusOK, merchListDTO)
 }

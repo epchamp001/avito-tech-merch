@@ -16,16 +16,18 @@ import (
 )
 
 type authService struct {
-	repo      db.Repository
-	logger    logger.Logger
-	JWTConfig config.JWTConfig
+	repo         db.Repository
+	logger       logger.Logger
+	JWTConfig    config.JWTConfig
+	tokenService myjwt.TokenService
 }
 
-func NewAuthService(repo db.Repository, log logger.Logger, jwtConfig config.JWTConfig) AuthService {
+func NewAuthService(repo db.Repository, log logger.Logger, jwtConfig config.JWTConfig, tokenService myjwt.TokenService) AuthService {
 	return &authService{
-		repo:      repo,
-		logger:    log,
-		JWTConfig: jwtConfig,
+		repo:         repo,
+		logger:       log,
+		JWTConfig:    jwtConfig,
+		tokenService: tokenService,
 	}
 }
 func (s *authService) Register(ctx context.Context, username string, password string) (string, error) {
@@ -69,7 +71,7 @@ func (s *authService) Register(ctx context.Context, username string, password st
 		return "", err
 	}
 
-	token, err := myjwt.GenerateToken(userID, s.JWTConfig.SecretKey, s.JWTConfig.TokenExpiry)
+	token, err := s.tokenService.GenerateToken(userID, s.JWTConfig.SecretKey, s.JWTConfig.TokenExpiry)
 	if err != nil {
 		s.logger.Errorw("Failed to generate token",
 			"error", err,
@@ -104,7 +106,7 @@ func (s *authService) Login(ctx context.Context, username string, password strin
 		return "", fmt.Errorf("invalid password")
 	}
 
-	token, err := myjwt.GenerateToken(user.ID, s.JWTConfig.SecretKey, s.JWTConfig.TokenExpiry)
+	token, err := s.tokenService.GenerateToken(user.ID, s.JWTConfig.SecretKey, s.JWTConfig.TokenExpiry)
 	if err != nil {
 		s.logger.Errorw("Failed to generate token",
 			"error", err,
@@ -117,7 +119,7 @@ func (s *authService) Login(ctx context.Context, username string, password strin
 }
 
 func (s *authService) ValidateToken(token string) (int, error) {
-	userID, err := myjwt.ParseJWTToken(token, s.JWTConfig.SecretKey)
+	userID, err := s.tokenService.ParseJWTToken(token, s.JWTConfig.SecretKey)
 	if err != nil {
 		if errors.Is(err, jwt.ErrSignatureInvalid) {
 			s.logger.Errorw("Invalid token signature",

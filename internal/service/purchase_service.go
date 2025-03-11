@@ -19,6 +19,8 @@ func NewPurchaseService(repo db.Repository, log logger.Logger) *purchaseService 
 }
 
 func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchName string) error {
+	var err error
+
 	merch, err := s.repo.GetMerchByName(ctx, merchName)
 	if err != nil {
 		s.logger.Errorw("Failed to get merch",
@@ -68,7 +70,7 @@ func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchNa
 	}()
 
 	newBalance := balance - merch.Price
-	if err := s.repo.UpdateBalance(ctx, userID, newBalance); err != nil {
+	if err = s.repo.UpdateBalance(ctx, userID, newBalance); err != nil {
 		s.logger.Errorw("Failed to update user balance",
 			"userID", userID,
 			"newBalance", newBalance,
@@ -83,7 +85,7 @@ func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchNa
 		CreatedAt: time.Now(),
 	}
 
-	if _, err := s.repo.CreatePurchase(ctx, purchase); err != nil {
+	if _, err = s.repo.CreatePurchase(ctx, purchase); err != nil {
 		s.logger.Errorw("Failed to create purchase",
 			"userID", userID,
 			"merchName", merchName,
@@ -92,7 +94,7 @@ func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchNa
 		return fmt.Errorf("failed to create purchase: %w", err)
 	}
 
-	if err := s.repo.CommitTx(ctx, tx); err != nil {
+	if err = s.repo.CommitTx(ctx, tx); err != nil {
 		s.logger.Errorw("Failed to commit transaction",
 			"userID", userID,
 			"merchName", merchName,

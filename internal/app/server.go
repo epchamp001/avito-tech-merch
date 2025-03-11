@@ -6,6 +6,7 @@ import (
 	"avito-tech-merch/internal/service"
 	"avito-tech-merch/internal/storage/db"
 	"avito-tech-merch/internal/storage/db/postgres"
+	"avito-tech-merch/pkg/jwt"
 	"avito-tech-merch/pkg/logger"
 	"context"
 	"errors"
@@ -46,7 +47,9 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 
 	repo := db.NewRepository(userRepo, merchRepo, purchaseRepo, transactionRepo, txManager)
 
-	authService := service.NewAuthService(repo, log, cfg.JWT)
+	tokenService := jwt.NewTokenService()
+
+	authService := service.NewAuthService(repo, log, cfg.JWT, tokenService)
 	userService := service.NewUserService(repo, log)
 	merchService := service.NewMerchService(repo, log)
 	purchaseService := service.NewPurchaseService(repo, log)
