@@ -1,7 +1,7 @@
 env: "dev"
 
 application:
-  app: "merge-store"
+  app: "merch-store"
 
 public_server:
   enable: true
@@ -14,7 +14,7 @@ storage:
     hosts:
       - "${DB_HOST}"
     port: 5432
-    database: "merge-store"
+    database: "merch-store"
     username: "champ001"
     password: "${DB_PASSWORD}"
     ssl_mode: "disable"

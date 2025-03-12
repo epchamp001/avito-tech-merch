@@ -1,0 +1,74 @@
+version: "3.8"
+services:
+  app:
+    container_name: merch_store_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: "postgres"
+      DB_PASSWORD: "123champ123"
+      JWT_SECRET_KEY: "zN1qT3v5PbC+fKmB9pVjQ13O8+wsyxMGj5L9C/wT4lU="
+      DB_DSN: "postgres://champ001:123champ123@postgres:5432/merch-store?sslmode=disable"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - postgres
+
+  postgres:
+    container_name: postgres_container
+    image: postgres:17.4
+    environment:
+      POSTGRES_DB: "merch-store"
+      POSTGRES_USER: "champ001"
+      POSTGRES_PASSWORD: "123champ123"
+    volumes:
+      - merge-store-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U champ001 -d merch-store"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 4G
+    networks:
+      - postgres
+
+  pgadmin:
+    container_name: pgadmin_container
+    image: dpage/pgadmin4:8.4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "epchamp001@gmail.com"
+      PGADMIN_DEFAULT_PASSWORD: "123champ123"
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+    networks:
+      - postgres
+
+volumes:
+  merge-store-data:
+  pgadmin-data:
+
+networks:
+  postgres:
+    driver: bridge

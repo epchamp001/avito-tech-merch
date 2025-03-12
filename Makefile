@@ -1,4 +1,4 @@
-DB_DSN=postgres://champ001:123champ123@localhost:5432/merge-store?sslmode=disable
+DB_DSN=postgres://champ001:123champ123@localhost:5432/merch-store?sslmode=disable
 
 .PHONY: goose-up goose-down goose-create goose-status goose-reset
 

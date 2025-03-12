@@ -17,7 +17,7 @@ type Config struct {
 func LoadConfig(configPath, envPath string) (*Config, error) {
 	err := godotenv.Load(envPath)
 	if err != nil {
-		return nil, fmt.Errorf("error loading .env file from %s: %v", envPath, err)
+		fmt.Printf("WARNING: error loading .env file from %s: %v\n", envPath, err)
 	}
 
 	viper.SetConfigName("config")
