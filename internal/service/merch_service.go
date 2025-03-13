@@ -27,6 +27,7 @@ func (s *merchService) ListMerch(ctx context.Context) ([]*models.Merch, error) {
 
 	return merchList, nil
 }
+
 func (s *merchService) GetMerch(ctx context.Context, merchID int) (*models.Merch, error) {
 	merch, err := s.repo.GetMerchByID(ctx, merchID)
 	if err != nil {

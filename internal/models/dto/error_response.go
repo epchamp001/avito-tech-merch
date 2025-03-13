@@ -27,3 +27,17 @@ type ErrorResponseUnauthorized401 struct {
 	Code    int    `json:"code" example:"401"`
 	Message string `json:"message" example:"unauthorized"`
 }
+
+// ErrorJWTMissingToken represents an error response when the JWT token is missing
+// @Description The standard API error format for 401 Unauthorized (missing token)
+type ErrorJWTMissingToken struct {
+	Code    int    `json:"code" example:"401"`
+	Message string `json:"message" example:"missing token"`
+}
+
+// ErrorJWTInvalidToken represents an error response when the JWT token is invalid
+// @Description The standard API error format for 401 Unauthorized (invalid token)
+type ErrorJWTInvalidToken struct {
+	Code    int    `json:"code" example:"401"`
+	Message string `json:"message" example:"invalid token"`
+}
