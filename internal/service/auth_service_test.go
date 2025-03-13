@@ -32,12 +32,13 @@ func TestAuthService_Register_Success(t *testing.T) {
 	username := "newUser"
 	password := "password123"
 
+	txMock := mockRepo.NewTxManager(t)
+	repoMock.On("BeginTx", ctx).Return(txMock, nil)
 	repoMock.On("GetUserByUsername", ctx, username).Return(nil, pgx.ErrNoRows)
-
 	repoMock.On("CreateUser", ctx, mock.MatchedBy(func(user *models.User) bool {
 		return user.Username == username && user.PasswordHash != "" && user.Balance == 1000
 	})).Return(1, nil)
-
+	repoMock.On("CommitTx", ctx, txMock).Return(nil)
 	expectedToken := "jwt-token"
 	jwtMock.On("GenerateToken", 1, jwtConfig.SecretKey, jwtConfig.TokenExpiry).Return(expectedToken, nil)
 
@@ -45,8 +46,10 @@ func TestAuthService_Register_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expectedToken, token)
 
+	repoMock.AssertCalled(t, "BeginTx", ctx)
 	repoMock.AssertCalled(t, "GetUserByUsername", ctx, username)
 	repoMock.AssertCalled(t, "CreateUser", ctx, mock.Anything)
+	repoMock.AssertCalled(t, "CommitTx", ctx, txMock)
 	jwtMock.AssertCalled(t, "GenerateToken", 1, jwtConfig.SecretKey, jwtConfig.TokenExpiry)
 }
 
@@ -65,16 +68,27 @@ func TestAuthService_Register_GetUserError(t *testing.T) {
 	username := "user"
 	password := "pass"
 	expectedErr := errors.New("database error")
+	txMock := mockRepo.NewTxManager(t)
 
+	repoMock.On("BeginTx", ctx).Return(txMock, nil)
 	repoMock.On("GetUserByUsername", ctx, username).Return(nil, expectedErr)
-	loggerMock.On("Errorw", "Failed to get user by username", "error", expectedErr, "username", username).Return()
+	repoMock.On("RollbackTx", ctx, txMock).Return(nil)
+	loggerMock.On("Errorw", "Failed to get user by username",
+		"error", expectedErr,
+		"username", username,
+	).Return()
 
 	token, err := authService.Register(ctx, username, password)
 	assert.Error(t, err)
 	assert.Empty(t, token)
 
+	repoMock.AssertCalled(t, "BeginTx", ctx)
 	repoMock.AssertCalled(t, "GetUserByUsername", ctx, username)
-	loggerMock.AssertCalled(t, "Errorw", "Failed to get user by username", "error", expectedErr, "username", username)
+	repoMock.AssertCalled(t, "RollbackTx", ctx, txMock)
+	loggerMock.AssertCalled(t, "Errorw", "Failed to get user by username",
+		"error", expectedErr,
+		"username", username,
+	)
 }
 
 func TestAuthService_Register_UserAlreadyExists(t *testing.T) {
@@ -99,7 +113,11 @@ func TestAuthService_Register_UserAlreadyExists(t *testing.T) {
 		Balance:      1000,
 		CreatedAt:    time.Now(),
 	}
+
+	txMock := mockRepo.NewTxManager(t)
+	repoMock.On("BeginTx", ctx).Return(txMock, nil)
 	repoMock.On("GetUserByUsername", ctx, username).Return(existingUser, nil)
+	repoMock.On("RollbackTx", ctx, txMock).Return(nil)
 	loggerMock.On("Infow", "User already exists", "username", username).Return()
 
 	token, err := authService.Register(ctx, username, password)
@@ -107,7 +125,9 @@ func TestAuthService_Register_UserAlreadyExists(t *testing.T) {
 	assert.Contains(t, err.Error(), "user already exists")
 	assert.Empty(t, token)
 
+	repoMock.AssertCalled(t, "BeginTx", ctx)
 	repoMock.AssertCalled(t, "GetUserByUsername", ctx, username)
+	repoMock.AssertCalled(t, "RollbackTx", ctx, txMock)
 	loggerMock.AssertCalled(t, "Infow", "User already exists", "username", username)
 }
 
@@ -126,19 +146,33 @@ func TestAuthService_Register_CreateUserError(t *testing.T) {
 	username := "newUser"
 	password := "password123"
 
+	txMock := mockRepo.NewTxManager(t)
+	repoMock.On("BeginTx", ctx).Return(txMock, nil)
 	repoMock.On("GetUserByUsername", ctx, username).Return(nil, pgx.ErrNoRows)
 
+	expectedErr := errors.New("failed to create user")
 	repoMock.On("CreateUser", ctx, mock.MatchedBy(func(user *models.User) bool {
 		return user.Username == username && user.PasswordHash != ""
-	})).Return(0, errors.New("failed to create user"))
-	loggerMock.On("Errorw", "Failed to create user", "error", errors.New("failed to create user"), "username", username).Return()
+	})).Return(0, expectedErr)
+	repoMock.On("RollbackTx", ctx, txMock).Return(nil).Once()
+
+	loggerMock.On("Errorw", "Failed to create user",
+		"error", expectedErr,
+		"username", username,
+	).Return()
 
 	token, err := authService.Register(ctx, username, password)
 	assert.Error(t, err)
 	assert.Empty(t, token)
 
+	repoMock.AssertCalled(t, "BeginTx", ctx)
+	repoMock.AssertCalled(t, "GetUserByUsername", ctx, username)
 	repoMock.AssertCalled(t, "CreateUser", ctx, mock.Anything)
-	loggerMock.AssertCalled(t, "Errorw", "Failed to create user", "error", errors.New("failed to create user"), "username", username)
+	repoMock.AssertCalled(t, "RollbackTx", ctx, txMock)
+	loggerMock.AssertCalled(t, "Errorw", "Failed to create user",
+		"error", expectedErr,
+		"username", username,
+	)
 }
 
 func TestAuthService_Register_GenerateTokenError(t *testing.T) {
@@ -156,22 +190,146 @@ func TestAuthService_Register_GenerateTokenError(t *testing.T) {
 	username := "newUser"
 	password := "password123"
 
+	txMock := mockRepo.NewTxManager(t)
+	repoMock.On("BeginTx", ctx).Return(txMock, nil)
 	repoMock.On("GetUserByUsername", ctx, username).Return(nil, pgx.ErrNoRows)
-
 	repoMock.On("CreateUser", ctx, mock.MatchedBy(func(user *models.User) bool {
 		return user.Username == username && user.PasswordHash != ""
 	})).Return(1, nil)
 
 	expectedErr := errors.New("failed to generate token")
 	jwtMock.On("GenerateToken", 1, jwtConfig.SecretKey, jwtConfig.TokenExpiry).Return("", expectedErr)
-	loggerMock.On("Errorw", "Failed to generate token", "error", expectedErr, "userID", mock.Anything).Return()
+	loggerMock.On("Errorw", "Failed to generate token",
+		"error", expectedErr,
+		"userID", mock.Anything,
+	).Return()
+	repoMock.On("RollbackTx", ctx, txMock).Return(nil).Once()
 
 	token, err := authService.Register(ctx, username, password)
 	assert.Error(t, err)
 	assert.Empty(t, token)
 
+	repoMock.AssertCalled(t, "BeginTx", ctx)
+	repoMock.AssertCalled(t, "GetUserByUsername", ctx, username)
+	repoMock.AssertCalled(t, "CreateUser", ctx, mock.Anything)
 	jwtMock.AssertCalled(t, "GenerateToken", 1, jwtConfig.SecretKey, jwtConfig.TokenExpiry)
-	loggerMock.AssertCalled(t, "Errorw", "Failed to generate token", "error", expectedErr, "userID", mock.Anything)
+	repoMock.AssertCalled(t, "RollbackTx", ctx, txMock)
+	loggerMock.AssertCalled(t, "Errorw", "Failed to generate token",
+		"error", expectedErr,
+		"userID", mock.Anything,
+	)
+}
+
+func TestAuthService_Register_BeginTxError(t *testing.T) {
+	repoMock := mockRepo.NewRepository(t)
+	loggerMock := mockLog.NewLogger(t)
+	jwtMock := mockJWT.NewTokenService(t)
+	jwtConfig := config.JWTConfig{
+		SecretKey:   "secret",
+		TokenExpiry: 3600,
+	}
+	authService := NewAuthService(repoMock, loggerMock, jwtConfig, jwtMock)
+
+	ctx := context.Background()
+	username := "newUser"
+	password := "password123"
+
+	expectedErr := errors.New("begin tx error")
+	repoMock.On("BeginTx", ctx).Return(nil, expectedErr)
+	loggerMock.On("Errorw", "Failed to begin transaction",
+		"username", username,
+		"error", expectedErr,
+	).Return()
+
+	token, err := authService.Register(ctx, username, password)
+	assert.Error(t, err)
+	assert.Empty(t, token)
+
+	repoMock.AssertCalled(t, "BeginTx", ctx)
+	loggerMock.AssertCalled(t, "Errorw", "Failed to begin transaction",
+		"username", username,
+		"error", expectedErr,
+	)
+}
+
+func TestAuthService_Register_CommitTxError(t *testing.T) {
+	repoMock := mockRepo.NewRepository(t)
+	loggerMock := mockLog.NewLogger(t)
+	jwtMock := mockJWT.NewTokenService(t)
+	jwtConfig := config.JWTConfig{
+		SecretKey:   "secret",
+		TokenExpiry: 3600,
+	}
+	authService := NewAuthService(repoMock, loggerMock, jwtConfig, jwtMock)
+
+	ctx := context.Background()
+	username := "newUser"
+	password := "password123"
+
+	txMock := mockRepo.NewTxManager(t)
+	repoMock.On("BeginTx", ctx).Return(txMock, nil)
+	repoMock.On("GetUserByUsername", ctx, username).Return(nil, pgx.ErrNoRows)
+	repoMock.On("CreateUser", ctx, mock.AnythingOfType("*models.User")).Return(1, nil)
+	expectedErr := errors.New("commit tx error")
+	repoMock.On("CommitTx", ctx, txMock).Return(expectedErr)
+	repoMock.On("RollbackTx", ctx, txMock).Return(nil).Once()
+	jwtMock.On("GenerateToken", 1, jwtConfig.SecretKey, jwtConfig.TokenExpiry).Return("jwt-token", nil)
+	loggerMock.On("Errorw", "Failed to commit transaction",
+		"username", username,
+		"error", expectedErr,
+	).Return()
+
+	token, err := authService.Register(ctx, username, password)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to commit transaction")
+	assert.Empty(t, token)
+
+	repoMock.AssertCalled(t, "CommitTx", ctx, txMock)
+	repoMock.AssertCalled(t, "RollbackTx", ctx, txMock)
+	loggerMock.AssertCalled(t, "Errorw", "Failed to commit transaction",
+		"username", username,
+		"error", expectedErr,
+	)
+}
+
+func TestAuthService_Register_RollbackTxError(t *testing.T) {
+	repoMock := mockRepo.NewRepository(t)
+	loggerMock := mockLog.NewLogger(t)
+	jwtMock := mockJWT.NewTokenService(t)
+	jwtConfig := config.JWTConfig{
+		SecretKey:   "secret",
+		TokenExpiry: 3600,
+	}
+	authService := NewAuthService(repoMock, loggerMock, jwtConfig, jwtMock)
+
+	ctx := context.Background()
+	username := "newUser"
+	password := "password123"
+
+	txMock := mockRepo.NewTxManager(t)
+	repoMock.On("BeginTx", ctx).Return(txMock, nil)
+	expectedErr := errors.New("get user error")
+	repoMock.On("GetUserByUsername", ctx, username).Return(nil, expectedErr)
+	rollbackErr := errors.New("rollback failure")
+	repoMock.On("RollbackTx", ctx, txMock).Return(rollbackErr).Once()
+	loggerMock.On("Errorw", "Failed to get user by username",
+		"error", expectedErr,
+		"username", username,
+	).Return()
+	loggerMock.On("Errorw", "Failed to rollback transaction",
+		"username", username,
+		"error", rollbackErr,
+	).Return()
+
+	token, err := authService.Register(ctx, username, password)
+	assert.Error(t, err)
+	assert.Empty(t, token)
+
+	repoMock.AssertCalled(t, "RollbackTx", ctx, txMock)
+	loggerMock.AssertCalled(t, "Errorw", "Failed to rollback transaction",
+		"username", username,
+		"error", rollbackErr,
+	)
 }
 
 func TestAuthService_Login_UserNotFound(t *testing.T) {

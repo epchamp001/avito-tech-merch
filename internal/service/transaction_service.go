@@ -37,33 +37,6 @@ func (s *transactionService) TransferCoins(ctx context.Context, senderID int, re
 	}
 
 	var err error
-	senderBalance, err := s.repo.GetBalanceByID(ctx, senderID)
-	if err != nil {
-		s.logger.Errorw("Failed to get sender balance",
-			"senderID", senderID,
-			"error", err,
-		)
-		return fmt.Errorf("failed to get sender balance: %w", err)
-	}
-
-	if senderBalance < amount {
-		s.logger.Warnw("Insufficient funds",
-			"senderID", senderID,
-			"balance", senderBalance,
-			"amount", amount,
-		)
-		return fmt.Errorf("insufficient funds")
-	}
-
-	receiverBalance, err := s.repo.GetBalanceByID(ctx, receiverID)
-	if err != nil {
-		s.logger.Errorw("Failed to get receiver balance",
-			"receiverID", receiverID,
-			"error", err,
-		)
-		return fmt.Errorf("failed to get receiver balance: %w", err)
-	}
-
 	tx, err := s.repo.BeginTx(ctx)
 	if err != nil {
 		s.logger.Errorw("Failed to begin transaction",
@@ -86,6 +59,34 @@ func (s *transactionService) TransferCoins(ctx context.Context, senderID int, re
 			}
 		}
 	}()
+
+	senderBalance, err := s.repo.GetBalanceByID(ctx, senderID)
+	if err != nil {
+		s.logger.Errorw("Failed to get sender balance",
+			"senderID", senderID,
+			"error", err,
+		)
+		return fmt.Errorf("failed to get sender balance: %w", err)
+	}
+
+	if senderBalance < amount {
+		s.logger.Warnw("Insufficient funds",
+			"senderID", senderID,
+			"balance", senderBalance,
+			"amount", amount,
+		)
+		err = fmt.Errorf("insufficient funds")
+		return fmt.Errorf("insufficient funds")
+	}
+
+	receiverBalance, err := s.repo.GetBalanceByID(ctx, receiverID)
+	if err != nil {
+		s.logger.Errorw("Failed to get receiver balance",
+			"receiverID", receiverID,
+			"error", err,
+		)
+		return fmt.Errorf("failed to get receiver balance: %w", err)
+	}
 
 	newSenderBalance := senderBalance - amount
 	if err = s.repo.UpdateBalance(ctx, senderID, newSenderBalance); err != nil {

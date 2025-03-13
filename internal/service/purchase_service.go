@@ -21,33 +21,6 @@ func NewPurchaseService(repo db.Repository, log logger.Logger) *purchaseService 
 func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchName string) error {
 	var err error
 
-	merch, err := s.repo.GetMerchByName(ctx, merchName)
-	if err != nil {
-		s.logger.Errorw("Failed to get merch",
-			"merchName", merchName,
-			"error", err,
-		)
-		return fmt.Errorf("failed to get merch: %w", err)
-	}
-
-	balance, err := s.repo.GetBalanceByID(ctx, userID)
-	if err != nil {
-		s.logger.Errorw("Failed to get user balance",
-			"userID", userID,
-			"error", err,
-		)
-		return err
-	}
-
-	if balance < merch.Price {
-		s.logger.Warnw("Insufficient funds",
-			"userID", userID,
-			"balance", balance,
-			"merchPrice", merch.Price,
-		)
-		return fmt.Errorf("insufficient funds")
-	}
-
 	tx, err := s.repo.BeginTx(ctx)
 	if err != nil {
 		s.logger.Errorw("Failed to begin transaction",
@@ -68,6 +41,36 @@ func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchNa
 			}
 		}
 	}()
+
+	merch, err := s.repo.GetMerchByName(ctx, merchName)
+	if err != nil {
+		s.logger.Errorw("Failed to get merch",
+			"merchName", merchName,
+			"error", err,
+		)
+		err = fmt.Errorf("failed to get merch: %w", err)
+		return fmt.Errorf("failed to get merch: %w", err)
+	}
+
+	balance, err := s.repo.GetBalanceByID(ctx, userID)
+	if err != nil {
+		s.logger.Errorw("Failed to get user balance",
+			"userID", userID,
+			"error", err,
+		)
+		err = fmt.Errorf("failed to get user balance: %w", err)
+		return err
+	}
+
+	if balance < merch.Price {
+		s.logger.Warnw("Insufficient funds",
+			"userID", userID,
+			"balance", balance,
+			"merchPrice", merch.Price,
+		)
+		err = fmt.Errorf("insufficient funds")
+		return fmt.Errorf("insufficient funds")
+	}
 
 	newBalance := balance - merch.Price
 	if err = s.repo.UpdateBalance(ctx, userID, newBalance); err != nil {

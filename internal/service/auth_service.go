@@ -30,7 +30,28 @@ func NewAuthService(repo db.Repository, log logger.Logger, jwtConfig config.JWTC
 		tokenService: tokenService,
 	}
 }
+
 func (s *authService) Register(ctx context.Context, username string, password string) (string, error) {
+	var err error
+	tx, err := s.repo.BeginTx(ctx)
+	if err != nil {
+		s.logger.Errorw("Failed to begin transaction",
+			"username", username,
+			"error", err,
+		)
+		return "", fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			if rollbackErr := s.repo.RollbackTx(ctx, tx); rollbackErr != nil {
+				s.logger.Errorw("Failed to rollback transaction",
+					"username", username,
+					"error", rollbackErr,
+				)
+			}
+		}
+	}()
+
 	existingUser, err := s.repo.GetUserByUsername(ctx, username)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		s.logger.Errorw("Failed to get user by username",
@@ -39,10 +60,12 @@ func (s *authService) Register(ctx context.Context, username string, password st
 		)
 		return "", err
 	}
+
 	if existingUser != nil {
 		s.logger.Infow("User already exists",
 			"username", username,
 		)
+		err = errors.New("user already exists")
 		return "", fmt.Errorf("user already exists")
 	}
 
@@ -77,7 +100,16 @@ func (s *authService) Register(ctx context.Context, username string, password st
 			"error", err,
 			"userID", user.ID,
 		)
+		err = fmt.Errorf("failed to generate token: %w", err)
 		return "", err
+	}
+
+	if err = s.repo.CommitTx(ctx, tx); err != nil {
+		s.logger.Errorw("Failed to commit transaction",
+			"username", username,
+			"error", err,
+		)
+		return "", fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return token, nil

@@ -85,7 +85,6 @@ func TestUserController_GetInfo_Success(t *testing.T) {
 		Purchases:    []*models.Purchase{},
 		Transactions: []*models.Transaction{},
 	}
-	// Получаем ожидаемый DTO через функцию маппинга
 	expectedDTO := dto.MapUserInfoResponseToDTO(userInfo)
 
 	mockService.On("GetInfo", mock.Anything, 1).Return(userInfo, nil).Once()
