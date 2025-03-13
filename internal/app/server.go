@@ -66,7 +66,7 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 	contr := controller.NewController(authController, userController, merchController, purchaseController, transactionController)
 
 	router := gin.Default()
-	setupRoutes(router, contr, serv)
+	SetupRoutes(router, contr, serv)
 
 	httpServer := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", cfg.PublicServer.Endpoint, cfg.PublicServer.Port),

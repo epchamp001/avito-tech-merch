@@ -9,7 +9,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func setupRoutes(router *gin.Engine, controller controller.Controller, authService service.Service) {
+func SetupRoutes(router *gin.Engine, controller controller.Controller, authService service.Service) {
 	authMiddleware := middleware.JWTAuthMiddleware(authService)
 
 	api := router.Group("/api")

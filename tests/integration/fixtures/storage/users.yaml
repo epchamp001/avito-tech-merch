@@ -1,0 +1,11 @@
+- id: 1
+  username: "existing_user"
+  password_hash: "$2a$10$examplehashedpassword"
+  balance: 1000
+  created_at: "2025-03-12T12:00:00Z"
+
+- id: 2
+  username: "integration_login_user"
+  password_hash: "$2a$10$X8KqUkGJFIOZR3lkvDYRAOMRnsCoEP/hIiA1ymWsBzkdcji9u4/LC"
+  balance: 1000
+  created_at: "2025-03-12T12:00:00Z"

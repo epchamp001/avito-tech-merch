@@ -83,7 +83,7 @@ func (r *postgresUserRepository) GetUserByUsername(ctx context.Context, username
 		&user.CreatedAt,
 	)
 	if err != nil {
-		r.logger.Errorw("Error when getting a user by username",
+		r.logger.Warnw("Error when getting a user by username",
 			"error", err,
 			"username", username,
 		)
