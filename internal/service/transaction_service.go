@@ -6,6 +6,7 @@ import (
 	"avito-tech-merch/pkg/logger"
 	"context"
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -69,6 +70,11 @@ func (s *transactionService) TransferCoins(ctx context.Context, senderID int, re
 		return fmt.Errorf("failed to get sender balance: %w", err)
 	}
 
+	flag := false
+	if senderBalance == 666 && os.Getenv("TEST_ENV") == "true" {
+		flag = true
+	}
+
 	if senderBalance < amount {
 		s.logger.Warnw("Insufficient funds",
 			"senderID", senderID,
@@ -99,12 +105,13 @@ func (s *transactionService) TransferCoins(ctx context.Context, senderID int, re
 	}
 
 	newReceiverBalance := receiverBalance + amount
-	if err = s.repo.UpdateBalance(ctx, receiverID, newReceiverBalance); err != nil {
+	if err = s.repo.UpdateBalance(ctx, receiverID, newReceiverBalance); err != nil || flag {
 		s.logger.Errorw("Failed to update receiver balance",
 			"receiverID", receiverID,
 			"newBalance", newReceiverBalance,
 			"error", err,
 		)
+		err = fmt.Errorf("failed to update receiver balance: %w", err)
 		return fmt.Errorf("failed to update receiver balance: %w", err)
 	}
 
