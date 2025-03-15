@@ -17,6 +17,7 @@ func NewTransactionController(service service.Service) TransactionController {
 
 // SendCoin godoc
 // @Summary Transfer coins between users
+// @Security BearerAuth
 // @Description Allows a user to send coins to another user by specifying the receiver ID and the amount
 // @Tags transaction
 // @Accept  json

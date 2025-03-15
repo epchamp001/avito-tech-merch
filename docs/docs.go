@@ -116,6 +116,11 @@ const docTemplate = `{
         },
         "/info": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Fetches user information based on the userID from the context",
                 "consumes": [
                     "application/json"
@@ -151,6 +156,11 @@ const docTemplate = `{
         },
         "/merch": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Fetches all merch items from the database and returns a list of merch",
                 "consumes": [
                     "application/json"
@@ -181,8 +191,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/merch/buy/:item": {
+        "/merch/buy/{item}": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Allows a user to purchase a merchandise item by specifying the item ID in the URL",
                 "consumes": [
                     "application/json"
@@ -233,6 +248,11 @@ const docTemplate = `{
         },
         "/send-coin": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Allows a user to send coins to another user by specifying the receiver ID and the amount",
                 "consumes": [
                     "application/json"
@@ -523,7 +543,7 @@ const docTemplate = `{
         }
     },
     "securityDefinitions": {
-        "JWT": {
+        "BearerAuth": {
             "description": "JWT token",
             "type": "apiKey",
             "name": "Authorization",

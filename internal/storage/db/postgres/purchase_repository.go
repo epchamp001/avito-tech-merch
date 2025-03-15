@@ -6,19 +6,20 @@ import (
 	"avito-tech-merch/pkg/logger"
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type postgresPurchaseRepository struct {
-	pool   *pgxpool.Pool
+	conn   db.TxManager
 	logger logger.Logger
 }
 
-func NewPurchaseRepository(pool *pgxpool.Pool, log logger.Logger) db.PurchaseRepository {
-	return &postgresPurchaseRepository{pool: pool, logger: log}
+func NewPurchaseRepository(conn db.TxManager, log logger.Logger) db.PurchaseRepository {
+	return &postgresPurchaseRepository{conn: conn, logger: log}
 }
 
 func (r *postgresPurchaseRepository) CreatePurchase(ctx context.Context, purchase *models.Purchase) (int, error) {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
         INSERT INTO purchases (user_id, merch_id)
         VALUES ($1, $2)
@@ -26,7 +27,7 @@ func (r *postgresPurchaseRepository) CreatePurchase(ctx context.Context, purchas
     `
 
 	var purchaseID int
-	err := r.pool.QueryRow(ctx, query, purchase.UserID, purchase.MerchID).Scan(&purchaseID)
+	err := pool.QueryRow(ctx, query, purchase.UserID, purchase.MerchID).Scan(&purchaseID)
 	if err != nil {
 		r.logger.Errorw("Error creating purchase",
 			"error", err,
@@ -40,13 +41,15 @@ func (r *postgresPurchaseRepository) CreatePurchase(ctx context.Context, purchas
 }
 
 func (r *postgresPurchaseRepository) GetPurchaseByUserID(ctx context.Context, userID int) ([]*models.Purchase, error) {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
         SELECT id, user_id, merch_id, created_at
         FROM purchases
         WHERE user_id = $1
     `
 
-	rows, err := r.pool.Query(ctx, query, userID)
+	rows, err := pool.Query(ctx, query, userID)
 	if err != nil {
 		r.logger.Errorw("Error retrieving purchase list",
 			"error", err,

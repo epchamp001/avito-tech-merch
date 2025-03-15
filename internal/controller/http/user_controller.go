@@ -17,6 +17,7 @@ func NewUserController(service service.Service) UserController {
 
 // GetInfo godoc
 // @Summary Get user information
+// @Security BearerAuth
 // @Description Fetches user information based on the userID from the context
 // @Tags user
 // @Accept  json

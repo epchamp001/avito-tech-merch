@@ -6,25 +6,26 @@ import (
 	"avito-tech-merch/pkg/logger"
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type postgresMerchRepository struct {
-	pool   *pgxpool.Pool
+	conn   db.TxManager
 	logger logger.Logger
 }
 
-func NewMerchRepository(pool *pgxpool.Pool, log logger.Logger) db.MerchRepository {
-	return &postgresMerchRepository{pool: pool, logger: log}
+func NewMerchRepository(conn db.TxManager, log logger.Logger) db.MerchRepository {
+	return &postgresMerchRepository{conn: conn, logger: log}
 }
 
 func (r *postgresMerchRepository) GetAllMerch(ctx context.Context) ([]*models.Merch, error) {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
 		SELECT id, name, price 
 		FROM merch
 	`
 
-	rows, err := r.pool.Query(ctx, query)
+	rows, err := pool.Query(ctx, query)
 	if err != nil {
 		r.logger.Errorw("Error retrieving merch list",
 			"error", err,
@@ -61,6 +62,8 @@ func (r *postgresMerchRepository) GetAllMerch(ctx context.Context) ([]*models.Me
 }
 
 func (r *postgresMerchRepository) GetMerchByID(ctx context.Context, id int) (*models.Merch, error) {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
 		SELECT id, name, price 
 		FROM merch
@@ -68,7 +71,7 @@ func (r *postgresMerchRepository) GetMerchByID(ctx context.Context, id int) (*mo
 	`
 
 	var merch models.Merch
-	err := r.pool.QueryRow(ctx, query, id).Scan(&merch.ID, &merch.Name, &merch.Price)
+	err := pool.QueryRow(ctx, query, id).Scan(&merch.ID, &merch.Name, &merch.Price)
 	if err != nil {
 		r.logger.Errorw("Error retrieving merch by ID",
 			"error", err,
@@ -81,6 +84,8 @@ func (r *postgresMerchRepository) GetMerchByID(ctx context.Context, id int) (*mo
 }
 
 func (r *postgresMerchRepository) GetMerchByName(ctx context.Context, merchName string) (*models.Merch, error) {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
         SELECT id, name, price
         FROM merch
@@ -88,7 +93,7 @@ func (r *postgresMerchRepository) GetMerchByName(ctx context.Context, merchName 
     `
 
 	var merch models.Merch
-	err := r.pool.QueryRow(ctx, query, merchName).Scan(
+	err := pool.QueryRow(ctx, query, merchName).Scan(
 		&merch.ID,
 		&merch.Name,
 		&merch.Price,

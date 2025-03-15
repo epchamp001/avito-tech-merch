@@ -6,19 +6,20 @@ import (
 	"avito-tech-merch/pkg/logger"
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type postgresTransactionRepository struct {
-	pool   *pgxpool.Pool
+	conn   db.TxManager
 	logger logger.Logger
 }
 
-func NewTransactionRepository(pool *pgxpool.Pool, log logger.Logger) db.TransactionRepository {
-	return &postgresTransactionRepository{pool: pool, logger: log}
+func NewTransactionRepository(conn db.TxManager, log logger.Logger) db.TransactionRepository {
+	return &postgresTransactionRepository{conn: conn, logger: log}
 }
 
 func (r *postgresTransactionRepository) CreateTransaction(ctx context.Context, transaction *models.Transaction) (int, error) {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
         INSERT INTO transactions (sender_id, receiver_id, amount, created_at)
         VALUES ($1, $2, $3, $4)
@@ -26,7 +27,7 @@ func (r *postgresTransactionRepository) CreateTransaction(ctx context.Context, t
     `
 
 	var transactionID int
-	err := r.pool.QueryRow(ctx, query, transaction.SenderID, transaction.ReceiverID, transaction.Amount, transaction.CreatedAt).Scan(&transactionID)
+	err := pool.QueryRow(ctx, query, transaction.SenderID, transaction.ReceiverID, transaction.Amount, transaction.CreatedAt).Scan(&transactionID)
 	if err != nil {
 		r.logger.Errorw("Error creating transaction",
 			"error", err,
@@ -40,13 +41,15 @@ func (r *postgresTransactionRepository) CreateTransaction(ctx context.Context, t
 }
 
 func (r *postgresTransactionRepository) GetTransactionByUserID(ctx context.Context, userID int) ([]*models.Transaction, error) {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
         SELECT id, sender_id, receiver_id, amount, created_at
         FROM transactions
         WHERE sender_id = $1 OR receiver_id = $1
     `
 
-	rows, err := r.pool.Query(ctx, query, userID)
+	rows, err := pool.Query(ctx, query, userID)
 	if err != nil {
 		r.logger.Errorw("Error retrieving transaction list",
 			"error", err,

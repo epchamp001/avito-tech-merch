@@ -2,3 +2,5 @@
 
 # Игнорировать файл .env
 .env
+
+/coverage/coverage.out

@@ -17,6 +17,7 @@ func NewPurchaseController(service service.Service) PurchaseController {
 
 // BuyMerch godoc
 // @Summary Purchase a merchandise item
+// @Security BearerAuth
 // @Description Allows a user to purchase a merchandise item by specifying the item ID in the URL
 // @Tags purchase
 // @Accept  json
@@ -26,7 +27,7 @@ func NewPurchaseController(service service.Service) PurchaseController {
 // @Failure 400 {object} dto.ErrorResponse400 "Bad request (item is required)"
 // @Failure 401 {object} dto.ErrorResponseUnauthorized401 "Unauthorized"
 // @Failure 500 {object} dto.ErrorResponse500 "Internal server error"
-// @Router /merch/buy/:item [post]
+// @Router /merch/buy/{item} [post]
 func (c *purchaseController) BuyMerch(ctx *gin.Context) {
 	userID, exists := ctx.Get("userID")
 	if !exists {

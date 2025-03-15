@@ -3,9 +3,11 @@ package service
 import (
 	"avito-tech-merch/internal/models"
 	mockRepo "avito-tech-merch/internal/storage/db/mock"
+	"avito-tech-merch/internal/storage/db/postgres"
 	mockLog "avito-tech-merch/pkg/logger/mock"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"testing"
@@ -14,332 +16,472 @@ import (
 func TestPurchaseMerch_GetMerchError(t *testing.T) {
 	repoMock := mockRepo.NewRepository(t)
 	loggerMock := mockLog.NewLogger(t)
-	txMock := mockRepo.NewTxManager(t)
-	service := NewPurchaseService(repoMock, loggerMock)
+	txManagerMock := mockRepo.NewTxManager(t)
+	service := NewPurchaseService(repoMock, loggerMock, txManagerMock)
 
 	ctx := context.Background()
 	userID := 1
 	merchName := "T-Shirt"
-
 	expectedErr := errors.New("db error")
-	repoMock.On("BeginTx", ctx).Return(txMock, nil)
-	repoMock.On("GetMerchByName", ctx, merchName).Return(nil, expectedErr)
-	repoMock.On("RollbackTx", ctx, txMock).Return(nil)
-	loggerMock.On("Errorw", "Failed to get merch",
-		"merchName", merchName,
-		"error", expectedErr,
-	).Once()
+
+	txManagerMock.
+		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+			mock.AnythingOfType("func(context.Context) error")).
+		Run(func(args mock.Arguments) {
+			fn := args.Get(3).(func(context.Context) error)
+			_ = fn(context.Background())
+		}).
+		Return(expectedErr)
+
+	repoMock.
+		On("GetMerchByName", mock.Anything, merchName).
+		Return(nil, expectedErr)
+
+	loggerMock.
+		On("Errorw",
+			"Failed to get merch",
+			"merchName", merchName,
+			"error", expectedErr,
+		).Return()
+
+	loggerMock.
+		On("Errorw",
+			"Error during PurchaseMerch operation",
+			"error", expectedErr,
+		).Return()
 
 	err := service.PurchaseMerch(ctx, userID, merchName)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get merch")
 
-	repoMock.AssertCalled(t, "BeginTx", ctx)
-	repoMock.AssertCalled(t, "GetMerchByName", ctx, merchName)
-	repoMock.AssertCalled(t, "RollbackTx", ctx, txMock)
-	loggerMock.AssertCalled(t, "Errorw", "Failed to get merch",
+	loggerMock.AssertCalled(t, "Errorw",
+		"Failed to get merch",
 		"merchName", merchName,
 		"error", expectedErr,
 	)
+	loggerMock.AssertCalled(t, "Errorw",
+		"Error during PurchaseMerch operation",
+		"error", expectedErr,
+	)
+	repoMock.AssertCalled(t, "GetMerchByName", mock.Anything, merchName)
+	txManagerMock.AssertExpectations(t)
 }
 
 func TestPurchaseMerch_GetBalanceError(t *testing.T) {
 	repoMock := mockRepo.NewRepository(t)
 	loggerMock := mockLog.NewLogger(t)
-	txMock := mockRepo.NewTxManager(t)
-	service := NewPurchaseService(repoMock, loggerMock)
+	txManagerMock := mockRepo.NewTxManager(t)
+	service := NewPurchaseService(repoMock, loggerMock, txManagerMock)
 
 	ctx := context.Background()
 	userID := 1
 	merchName := "T-Shirt"
-
 	merch := &models.Merch{ID: 10, Name: merchName, Price: 150}
-	repoMock.On("BeginTx", ctx).Return(txMock, nil)
-	repoMock.On("GetMerchByName", ctx, merchName).Return(merch, nil)
-
 	expectedErr := errors.New("balance error")
-	repoMock.On("GetBalanceByID", ctx, userID).Return(0, expectedErr)
-	repoMock.On("RollbackTx", ctx, txMock).Return(nil)
 
-	loggerMock.On("Errorw", "Failed to get user balance",
-		"userID", userID,
-		"error", expectedErr,
-	).Once()
+	txManagerMock.
+		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+			mock.AnythingOfType("func(context.Context) error")).
+		Run(func(args mock.Arguments) {
+			fn := args.Get(3).(func(context.Context) error)
+			_ = fn(context.Background())
+		}).
+		Return(fmt.Errorf("failed to get user balance: %w", expectedErr))
+
+	repoMock.
+		On("GetMerchByName", mock.Anything, merchName).
+		Return(merch, nil)
+	repoMock.
+		On("GetBalanceByID", mock.Anything, userID).
+		Return(0, expectedErr)
+
+	loggerMock.
+		On("Errorw",
+			"Failed to get user balance",
+			"userID", userID,
+			"error", expectedErr,
+		).Return()
+	loggerMock.
+		On("Errorw",
+			"Error during PurchaseMerch operation",
+			"error", fmt.Errorf("failed to get user balance: %w", expectedErr),
+		).Return()
 
 	err := service.PurchaseMerch(ctx, userID, merchName)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get user balance")
 
-	repoMock.AssertCalled(t, "BeginTx", ctx)
-	repoMock.AssertCalled(t, "GetMerchByName", ctx, merchName)
-	repoMock.AssertCalled(t, "GetBalanceByID", ctx, userID)
-	repoMock.AssertCalled(t, "RollbackTx", ctx, txMock)
-	loggerMock.AssertCalled(t, "Errorw", "Failed to get user balance",
+	loggerMock.AssertCalled(t, "Errorw",
+		"Failed to get user balance",
 		"userID", userID,
 		"error", expectedErr,
 	)
+	loggerMock.AssertCalled(t, "Errorw",
+		"Error during PurchaseMerch operation",
+		"error", fmt.Errorf("failed to get user balance: %w", expectedErr),
+	)
+	repoMock.AssertCalled(t, "GetMerchByName", mock.Anything, merchName)
+	repoMock.AssertCalled(t, "GetBalanceByID", mock.Anything, userID)
+	txManagerMock.AssertExpectations(t)
 }
 
 func TestPurchaseMerch_InsufficientFunds(t *testing.T) {
 	repoMock := mockRepo.NewRepository(t)
 	loggerMock := mockLog.NewLogger(t)
-	txMock := mockRepo.NewTxManager(t)
-	service := NewPurchaseService(repoMock, loggerMock)
+	txManagerMock := mockRepo.NewTxManager(t)
+	service := NewPurchaseService(repoMock, loggerMock, txManagerMock)
 
 	ctx := context.Background()
 	userID := 1
 	merchName := "T-Shirt"
-
 	merch := &models.Merch{ID: 10, Name: merchName, Price: 150}
-	repoMock.On("BeginTx", ctx).Return(txMock, nil)
-	repoMock.On("GetMerchByName", ctx, merchName).Return(merch, nil)
-	repoMock.On("GetBalanceByID", ctx, userID).Return(100, nil)
-	repoMock.On("RollbackTx", ctx, txMock).Return(nil)
-	loggerMock.On("Warnw", "Insufficient funds",
-		"userID", userID,
-		"balance", 100,
-		"merchPrice", merch.Price,
-	).Once()
+
+	txManagerMock.
+		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+			mock.AnythingOfType("func(context.Context) error")).
+		Run(func(args mock.Arguments) {
+			fn := args.Get(3).(func(context.Context) error)
+			_ = fn(context.Background())
+		}).
+		Return(fmt.Errorf("insufficient funds"))
+
+	repoMock.
+		On("GetMerchByName", mock.Anything, merchName).
+		Return(merch, nil)
+	repoMock.
+		On("GetBalanceByID", mock.Anything, userID).
+		Return(100, nil)
+
+	loggerMock.
+		On("Warnw",
+			"Insufficient funds",
+			"userID", userID,
+			"balance", 100,
+			"merchPrice", merch.Price,
+		).Return()
+	loggerMock.
+		On("Errorw",
+			"Error during PurchaseMerch operation",
+			"error", fmt.Errorf("insufficient funds"),
+		).Return()
 
 	err := service.PurchaseMerch(ctx, userID, merchName)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "insufficient funds")
 
-	repoMock.AssertCalled(t, "BeginTx", ctx)
-	repoMock.AssertCalled(t, "GetMerchByName", ctx, merchName)
-	repoMock.AssertCalled(t, "GetBalanceByID", ctx, userID)
-	repoMock.AssertCalled(t, "RollbackTx", ctx, txMock)
-	loggerMock.AssertCalled(t, "Warnw", "Insufficient funds",
+	loggerMock.AssertCalled(t, "Warnw",
+		"Insufficient funds",
 		"userID", userID,
 		"balance", 100,
 		"merchPrice", merch.Price,
 	)
+	loggerMock.AssertCalled(t, "Errorw",
+		"Error during PurchaseMerch operation",
+		"error", fmt.Errorf("insufficient funds"),
+	)
+	repoMock.AssertCalled(t, "GetMerchByName", mock.Anything, merchName)
+	repoMock.AssertCalled(t, "GetBalanceByID", mock.Anything, userID)
+	txManagerMock.AssertExpectations(t)
 }
 
 func TestPurchaseMerch_BeginTxError(t *testing.T) {
 	repoMock := mockRepo.NewRepository(t)
 	loggerMock := mockLog.NewLogger(t)
-	service := NewPurchaseService(repoMock, loggerMock)
+	txManagerMock := mockRepo.NewTxManager(t)
+	service := NewPurchaseService(repoMock, loggerMock, txManagerMock)
 
 	ctx := context.Background()
 	userID := 1
 	merchName := "T-Shirt"
-
 	expectedErr := errors.New("begin tx error")
-	repoMock.On("BeginTx", ctx).Return(nil, expectedErr)
-	loggerMock.On("Errorw", "Failed to begin transaction",
-		"userID", userID,
-		"merchName", merchName,
-		"error", expectedErr,
-	).Once()
+
+	txManagerMock.
+		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+			mock.AnythingOfType("func(context.Context) error")).
+		Return(expectedErr)
+
+	loggerMock.
+		On("Errorw",
+			"Error during PurchaseMerch operation",
+			"error", expectedErr,
+		).Return()
 
 	err := service.PurchaseMerch(ctx, userID, merchName)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to begin transaction")
+	assert.Contains(t, err.Error(), expectedErr.Error())
 
-	repoMock.AssertCalled(t, "BeginTx", ctx)
-	loggerMock.AssertCalled(t, "Errorw", "Failed to begin transaction",
-		"userID", userID,
-		"merchName", merchName,
+	loggerMock.AssertCalled(t, "Errorw",
+		"Error during PurchaseMerch operation",
 		"error", expectedErr,
 	)
+	txManagerMock.AssertExpectations(t)
 }
 
 func TestPurchaseMerch_UpdateBalanceError(t *testing.T) {
 	repoMock := mockRepo.NewRepository(t)
 	loggerMock := mockLog.NewLogger(t)
-	txMock := mockRepo.NewTxManager(t)
-	service := NewPurchaseService(repoMock, loggerMock)
+	txManagerMock := mockRepo.NewTxManager(t)
+	service := NewPurchaseService(repoMock, loggerMock, txManagerMock)
 
 	ctx := context.Background()
 	userID := 1
 	merchName := "T-Shirt"
-
 	merch := &models.Merch{ID: 10, Name: merchName, Price: 50}
-	repoMock.On("BeginTx", ctx).Return(txMock, nil)
-	repoMock.On("GetMerchByName", ctx, merchName).Return(merch, nil)
-	repoMock.On("GetBalanceByID", ctx, userID).Return(100, nil)
-
-	newBalance := 100 - merch.Price
 	expectedErr := errors.New("update balance error")
-	repoMock.On("UpdateBalance", ctx, userID, newBalance).Return(expectedErr)
-	repoMock.On("RollbackTx", ctx, txMock).Return(nil).Once()
 
-	loggerMock.On("Errorw", "Failed to update user balance",
-		"userID", userID,
-		"newBalance", newBalance,
-		"error", expectedErr,
-	).Once()
+	txManagerMock.
+		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+			mock.AnythingOfType("func(context.Context) error")).
+		Run(func(args mock.Arguments) {
+			fn := args.Get(3).(func(context.Context) error)
+			_ = fn(context.Background())
+		}).
+		Return(fmt.Errorf("failed to update user balance: %w", expectedErr))
+
+	repoMock.
+		On("GetMerchByName", mock.Anything, merchName).
+		Return(merch, nil)
+	repoMock.
+		On("GetBalanceByID", mock.Anything, userID).
+		Return(100, nil)
+	newBalance := 100 - merch.Price
+	repoMock.
+		On("UpdateBalance", mock.Anything, userID, newBalance).
+		Return(expectedErr)
+
+	loggerMock.
+		On("Errorw",
+			"Failed to update user balance",
+			"userID", userID,
+			"newBalance", newBalance,
+			"error", expectedErr,
+		).Return()
+	loggerMock.
+		On("Errorw",
+			"Error during PurchaseMerch operation",
+			"error", fmt.Errorf("failed to update user balance: %w", expectedErr),
+		).Return()
 
 	err := service.PurchaseMerch(ctx, userID, merchName)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to update user balance")
 
-	repoMock.AssertCalled(t, "UpdateBalance", ctx, userID, newBalance)
-	repoMock.AssertCalled(t, "RollbackTx", ctx, txMock)
-	loggerMock.AssertCalled(t, "Errorw", "Failed to update user balance",
+	loggerMock.AssertCalled(t, "Errorw",
+		"Failed to update user balance",
 		"userID", userID,
 		"newBalance", newBalance,
 		"error", expectedErr,
 	)
+	loggerMock.AssertCalled(t, "Errorw",
+		"Error during PurchaseMerch operation",
+		"error", fmt.Errorf("failed to update user balance: %w", expectedErr),
+	)
+	repoMock.AssertCalled(t, "UpdateBalance", mock.Anything, userID, newBalance)
+	txManagerMock.AssertExpectations(t)
 }
 
 func TestPurchaseMerch_CreatePurchaseError(t *testing.T) {
 	repoMock := mockRepo.NewRepository(t)
 	loggerMock := mockLog.NewLogger(t)
-	txMock := mockRepo.NewTxManager(t)
-	service := NewPurchaseService(repoMock, loggerMock)
+	txManagerMock := mockRepo.NewTxManager(t)
+	service := NewPurchaseService(repoMock, loggerMock, txManagerMock)
 
 	ctx := context.Background()
 	userID := 1
 	merchName := "T-Shirt"
-
 	merch := &models.Merch{ID: 10, Name: merchName, Price: 50}
-	repoMock.On("BeginTx", ctx).Return(txMock, nil)
-	repoMock.On("GetMerchByName", ctx, merchName).Return(merch, nil)
-	repoMock.On("GetBalanceByID", ctx, userID).Return(100, nil)
-
-	newBalance := 100 - merch.Price
-	repoMock.On("UpdateBalance", ctx, userID, newBalance).Return(nil)
-
 	expectedErr := errors.New("create purchase error")
-	repoMock.On("CreatePurchase", ctx, mock.AnythingOfType("*models.Purchase")).Return(0, expectedErr)
-	loggerMock.On("Errorw", "Failed to create purchase",
-		"userID", userID,
-		"merchName", merchName,
-		"error", expectedErr,
-	).Once()
-	repoMock.On("RollbackTx", ctx, txMock).Return(nil).Once()
+
+	txManagerMock.
+		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+			mock.AnythingOfType("func(context.Context) error")).
+		Run(func(args mock.Arguments) {
+			fn := args.Get(3).(func(context.Context) error)
+			_ = fn(context.Background())
+		}).
+		Return(fmt.Errorf("failed to create purchase: %w", expectedErr))
+
+	repoMock.
+		On("GetMerchByName", mock.Anything, merchName).
+		Return(merch, nil)
+	repoMock.
+		On("GetBalanceByID", mock.Anything, userID).
+		Return(100, nil)
+	newBalance := 100 - merch.Price
+	repoMock.
+		On("UpdateBalance", mock.Anything, userID, newBalance).
+		Return(nil)
+	repoMock.
+		On("CreatePurchase", mock.Anything, mock.AnythingOfType("*models.Purchase")).
+		Return(0, expectedErr)
+
+	loggerMock.
+		On("Errorw",
+			"Failed to create purchase",
+			"userID", userID,
+			"merchName", merchName,
+			"error", expectedErr,
+		).Return()
+	loggerMock.
+		On("Errorw",
+			"Error during PurchaseMerch operation",
+			"error", fmt.Errorf("failed to create purchase: %w", expectedErr),
+		).Return()
 
 	err := service.PurchaseMerch(ctx, userID, merchName)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create purchase")
-	repoMock.AssertCalled(t, "CreatePurchase", ctx, mock.AnythingOfType("*models.Purchase"))
-	repoMock.AssertCalled(t, "RollbackTx", ctx, txMock)
-	loggerMock.AssertCalled(t, "Errorw", "Failed to create purchase",
+
+	loggerMock.AssertCalled(t, "Errorw",
+		"Failed to create purchase",
 		"userID", userID,
 		"merchName", merchName,
 		"error", expectedErr,
 	)
+	loggerMock.AssertCalled(t, "Errorw",
+		"Error during PurchaseMerch operation",
+		"error", fmt.Errorf("failed to create purchase: %w", expectedErr),
+	)
+	repoMock.AssertCalled(t, "CreatePurchase", mock.Anything, mock.AnythingOfType("*models.Purchase"))
+	txManagerMock.AssertExpectations(t)
 }
 
 func TestPurchaseMerch_CommitTxError(t *testing.T) {
 	repoMock := mockRepo.NewRepository(t)
 	loggerMock := mockLog.NewLogger(t)
-	txMock := mockRepo.NewTxManager(t)
-	service := NewPurchaseService(repoMock, loggerMock)
+	txManagerMock := mockRepo.NewTxManager(t)
+	service := NewPurchaseService(repoMock, loggerMock, txManagerMock)
 
 	ctx := context.Background()
 	userID := 1
 	merchName := "T-Shirt"
-
-	merch := &models.Merch{ID: 10, Name: merchName, Price: 50}
-	repoMock.On("BeginTx", ctx).Return(txMock, nil)
-	repoMock.On("GetMerchByName", ctx, merchName).Return(merch, nil)
-	repoMock.On("GetBalanceByID", ctx, userID).Return(100, nil)
-
-	newBalance := 100 - merch.Price
-	repoMock.On("UpdateBalance", ctx, userID, newBalance).Return(nil)
-	repoMock.On("CreatePurchase", ctx, mock.AnythingOfType("*models.Purchase")).Return(1, nil)
-
 	expectedErr := errors.New("commit tx error")
-	repoMock.On("CommitTx", ctx, txMock).Return(expectedErr)
-	repoMock.On("RollbackTx", ctx, txMock).Return(nil).Once()
 
-	loggerMock.On("Errorw", "Failed to commit transaction",
-		"userID", userID,
-		"merchName", merchName,
-		"error", expectedErr,
-	).Once()
+	txManagerMock.
+		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+			mock.AnythingOfType("func(context.Context) error")).
+		Return(expectedErr)
+
+	loggerMock.
+		On("Errorw",
+			"Error during PurchaseMerch operation",
+			"error", expectedErr,
+		).Return()
 
 	err := service.PurchaseMerch(ctx, userID, merchName)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to commit transaction")
+	assert.Contains(t, err.Error(), "commit tx error")
 
-	repoMock.AssertCalled(t, "CommitTx", ctx, txMock)
-	repoMock.AssertCalled(t, "RollbackTx", ctx, txMock)
-	loggerMock.AssertCalled(t, "Errorw", "Failed to commit transaction",
-		"userID", userID,
-		"merchName", merchName,
+	loggerMock.AssertCalled(t, "Errorw",
+		"Error during PurchaseMerch operation",
 		"error", expectedErr,
 	)
+	txManagerMock.AssertExpectations(t)
 }
 
 func TestPurchaseMerch_Success(t *testing.T) {
 	repoMock := mockRepo.NewRepository(t)
 	loggerMock := mockLog.NewLogger(t)
-	txMock := mockRepo.NewTxManager(t)
-	service := NewPurchaseService(repoMock, loggerMock)
+	txManagerMock := mockRepo.NewTxManager(t)
+	service := NewPurchaseService(repoMock, loggerMock, txManagerMock)
 
 	ctx := context.Background()
 	userID := 1
 	merchName := "T-Shirt"
-
 	merch := &models.Merch{ID: 10, Name: merchName, Price: 50}
-	senderBalance := 100
-	repoMock.On("BeginTx", ctx).Return(txMock, nil)
-	repoMock.On("GetMerchByName", ctx, merchName).Return(merch, nil)
-	repoMock.On("GetBalanceByID", ctx, userID).Return(senderBalance, nil)
+	balance := 100
+	newBalance := balance - merch.Price
 
-	newBalance := senderBalance - merch.Price
-	repoMock.On("UpdateBalance", ctx, userID, newBalance).Return(nil)
-	repoMock.On("CreatePurchase", ctx, mock.MatchedBy(func(p *models.Purchase) bool {
-		return p.UserID == userID && p.MerchID == merch.ID
-	})).Return(1, nil)
-	repoMock.On("CommitTx", ctx, txMock).Return(nil)
+	txManagerMock.
+		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+			mock.AnythingOfType("func(context.Context) error")).
+		Run(func(args mock.Arguments) {
+			fn := args.Get(3).(func(context.Context) error)
+			_ = fn(context.Background())
+		}).
+		Return(nil)
+
+	repoMock.
+		On("GetMerchByName", mock.Anything, merchName).
+		Return(merch, nil)
+	repoMock.
+		On("GetBalanceByID", mock.Anything, userID).
+		Return(balance, nil)
+	repoMock.
+		On("UpdateBalance", mock.Anything, userID, newBalance).
+		Return(nil)
+	repoMock.
+		On("CreatePurchase", mock.Anything, mock.MatchedBy(func(p *models.Purchase) bool {
+			return p.UserID == userID && p.MerchID == merch.ID
+		})).Return(1, nil)
 
 	err := service.PurchaseMerch(ctx, userID, merchName)
 	assert.NoError(t, err)
 
-	repoMock.AssertCalled(t, "GetMerchByName", ctx, merchName)
-	repoMock.AssertCalled(t, "GetBalanceByID", ctx, userID)
-	repoMock.AssertCalled(t, "BeginTx", ctx)
-	repoMock.AssertCalled(t, "UpdateBalance", ctx, userID, newBalance)
-	repoMock.AssertCalled(t, "CreatePurchase", ctx, mock.AnythingOfType("*models.Purchase"))
-	repoMock.AssertCalled(t, "CommitTx", ctx, txMock)
+	repoMock.AssertCalled(t, "GetMerchByName", mock.Anything, merchName)
+	repoMock.AssertCalled(t, "GetBalanceByID", mock.Anything, userID)
+	repoMock.AssertCalled(t, "UpdateBalance", mock.Anything, userID, newBalance)
+	repoMock.AssertCalled(t, "CreatePurchase", mock.Anything, mock.AnythingOfType("*models.Purchase"))
+	txManagerMock.AssertExpectations(t)
 }
 
 func TestPurchaseMerch_RollbackTxError(t *testing.T) {
 	repoMock := mockRepo.NewRepository(t)
 	loggerMock := mockLog.NewLogger(t)
-	txMock := mockRepo.NewTxManager(t)
-	service := NewPurchaseService(repoMock, loggerMock)
+	txManagerMock := mockRepo.NewTxManager(t)
+	service := NewPurchaseService(repoMock, loggerMock, txManagerMock)
 
 	ctx := context.Background()
 	userID := 1
 	merchName := "T-Shirt"
-
 	merch := &models.Merch{ID: 10, Name: merchName, Price: 50}
-	repoMock.On("BeginTx", ctx).Return(txMock, nil)
-	repoMock.On("GetMerchByName", ctx, merchName).Return(merch, nil)
-	repoMock.On("GetBalanceByID", ctx, userID).Return(100, nil)
-
-	newBalance := 100 - merch.Price
+	balance := 100
 	expectedUpdateErr := errors.New("update balance error")
-	repoMock.On("UpdateBalance", ctx, userID, newBalance).Return(expectedUpdateErr)
+	newBalance := balance - merch.Price
 
-	rollbackErr := errors.New("rollback failure")
-	repoMock.On("RollbackTx", ctx, txMock).Return(rollbackErr).Once()
+	txManagerMock.
+		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+			mock.AnythingOfType("func(context.Context) error")).
+		Run(func(args mock.Arguments) {
+			fn := args.Get(3).(func(context.Context) error)
+			_ = fn(context.Background())
+		}).
+		Return(fmt.Errorf("failed to update user balance: %w", expectedUpdateErr))
 
-	loggerMock.On("Errorw", "Failed to update user balance",
-		"userID", userID,
-		"newBalance", newBalance,
-		"error", expectedUpdateErr,
-	).Once()
-	loggerMock.On("Errorw", "Failed to rollback transaction",
-		"userID", userID,
-		"merchName", merchName,
-		"error", rollbackErr,
-	).Once()
+	repoMock.
+		On("GetMerchByName", mock.Anything, merchName).
+		Return(merch, nil)
+	repoMock.
+		On("GetBalanceByID", mock.Anything, userID).
+		Return(balance, nil)
+	repoMock.
+		On("UpdateBalance", mock.Anything, userID, newBalance).
+		Return(expectedUpdateErr)
+
+	loggerMock.
+		On("Errorw",
+			"Failed to update user balance",
+			"userID", userID,
+			"newBalance", newBalance,
+			"error", expectedUpdateErr,
+		).Return()
+	loggerMock.
+		On("Errorw",
+			"Error during PurchaseMerch operation",
+			"error", fmt.Errorf("failed to update user balance: %w", expectedUpdateErr),
+		).Return()
 
 	err := service.PurchaseMerch(ctx, userID, merchName)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to update user balance")
 
-	repoMock.AssertCalled(t, "RollbackTx", ctx, txMock)
-	loggerMock.AssertCalled(t, "Errorw", "Failed to rollback transaction",
+	loggerMock.AssertCalled(t, "Errorw",
+		"Failed to update user balance",
 		"userID", userID,
-		"merchName", merchName,
-		"error", rollbackErr,
+		"newBalance", newBalance,
+		"error", expectedUpdateErr,
 	)
+	loggerMock.AssertCalled(t, "Errorw",
+		"Error during PurchaseMerch operation",
+		"error", fmt.Errorf("failed to update user balance: %w", expectedUpdateErr),
+	)
+	txManagerMock.AssertExpectations(t)
 }

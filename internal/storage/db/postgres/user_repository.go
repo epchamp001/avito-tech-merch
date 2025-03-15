@@ -6,20 +6,21 @@ import (
 	"avito-tech-merch/pkg/logger"
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"time"
 )
 
 type postgresUserRepository struct {
-	pool   *pgxpool.Pool
+	conn   db.TxManager
 	logger logger.Logger
 }
 
-func NewUserRepository(pool *pgxpool.Pool, log logger.Logger) db.UserRepository {
-	return &postgresUserRepository{pool: pool, logger: log}
+func NewUserRepository(conn db.TxManager, log logger.Logger) db.UserRepository {
+	return &postgresUserRepository{conn: conn, logger: log}
 }
 
 func (r *postgresUserRepository) CreateUser(ctx context.Context, user *models.User) (int, error) {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
 		INSERT INTO users (username, password_hash, balance, created_at)
 		VALUES ($1, $2, $3, $4)
@@ -29,7 +30,7 @@ func (r *postgresUserRepository) CreateUser(ctx context.Context, user *models.Us
 	user.CreatedAt = time.Now()
 
 	var userID int
-	err := r.pool.QueryRow(ctx, query, user.Username, user.PasswordHash, user.Balance, user.CreatedAt).Scan(&userID)
+	err := pool.QueryRow(ctx, query, user.Username, user.PasswordHash, user.Balance, user.CreatedAt).Scan(&userID)
 	if err != nil {
 		r.logger.Errorw("Error when creating a user",
 			"error", err,
@@ -42,6 +43,8 @@ func (r *postgresUserRepository) CreateUser(ctx context.Context, user *models.Us
 }
 
 func (r *postgresUserRepository) GetUserByID(ctx context.Context, userID int) (*models.User, error) {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
 		SELECT id, username, password_hash, balance, created_at
 		FROM users
@@ -49,7 +52,7 @@ func (r *postgresUserRepository) GetUserByID(ctx context.Context, userID int) (*
 	`
 
 	var user models.User
-	err := r.pool.QueryRow(ctx, query, userID).Scan(
+	err := pool.QueryRow(ctx, query, userID).Scan(
 		&user.ID,
 		&user.Username,
 		&user.PasswordHash,
@@ -68,6 +71,8 @@ func (r *postgresUserRepository) GetUserByID(ctx context.Context, userID int) (*
 }
 
 func (r *postgresUserRepository) GetUserByUsername(ctx context.Context, username string) (*models.User, error) {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
 		SELECT id, username, password_hash, balance, created_at
 		FROM users
@@ -75,7 +80,7 @@ func (r *postgresUserRepository) GetUserByUsername(ctx context.Context, username
 	`
 
 	var user models.User
-	err := r.pool.QueryRow(ctx, query, username).Scan(
+	err := pool.QueryRow(ctx, query, username).Scan(
 		&user.ID,
 		&user.Username,
 		&user.PasswordHash,
@@ -94,6 +99,8 @@ func (r *postgresUserRepository) GetUserByUsername(ctx context.Context, username
 }
 
 func (r *postgresUserRepository) GetBalanceByID(ctx context.Context, userID int) (int, error) {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
 		SELECT balance
 		FROM users
@@ -101,7 +108,7 @@ func (r *postgresUserRepository) GetBalanceByID(ctx context.Context, userID int)
 	`
 
 	var balance int
-	err := r.pool.QueryRow(ctx, query, userID).Scan(&balance)
+	err := pool.QueryRow(ctx, query, userID).Scan(&balance)
 	if err != nil {
 		r.logger.Errorw("Error when getting a user balance by userID",
 			"error", err,
@@ -113,6 +120,8 @@ func (r *postgresUserRepository) GetBalanceByID(ctx context.Context, userID int)
 }
 
 func (r *postgresUserRepository) GetBalanceByName(ctx context.Context, username string) (int, error) {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
 		SELECT balance
 		FROM users
@@ -120,7 +129,7 @@ func (r *postgresUserRepository) GetBalanceByName(ctx context.Context, username 
 	`
 
 	var balance int
-	err := r.pool.QueryRow(ctx, query, username).Scan(&balance)
+	err := pool.QueryRow(ctx, query, username).Scan(&balance)
 	if err != nil {
 		r.logger.Errorw("Error when getting a user balance by username",
 			"error", err,
@@ -132,13 +141,15 @@ func (r *postgresUserRepository) GetBalanceByName(ctx context.Context, username 
 }
 
 func (r *postgresUserRepository) UpdateBalance(ctx context.Context, userID int, newBalance int) error {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
 		UPDATE users
 		SET balance = $1
 		WHERE id = $2
 	`
 
-	result, err := r.pool.Exec(ctx, query, newBalance, userID)
+	result, err := pool.Exec(ctx, query, newBalance, userID)
 	if err != nil {
 		r.logger.Errorw("Error when updating a user balance",
 			"error", err,
@@ -159,12 +170,14 @@ func (r *postgresUserRepository) UpdateBalance(ctx context.Context, userID int, 
 }
 
 func (r *postgresUserRepository) GetAllUsers(ctx context.Context) ([]*models.User, error) {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
 		SELECT id, username, password_hash, balance, created_at
 		FROM users
 	`
 
-	rows, err := r.pool.Query(ctx, query)
+	rows, err := pool.Query(ctx, query)
 	if err != nil {
 		r.logger.Errorw("Error retrieving user list",
 			"error", err,
@@ -203,13 +216,15 @@ func (r *postgresUserRepository) GetAllUsers(ctx context.Context) ([]*models.Use
 }
 
 func (r *postgresUserRepository) UpdateUser(ctx context.Context, user *models.User) error {
+	pool := r.conn.GetExecutor(ctx)
+
 	query := `
 		UPDATE users
 		SET username = $1, password_hash = $2, balance = $3
 		WHERE id = $4
 	`
 
-	result, err := r.pool.Exec(ctx, query, user.Username, user.PasswordHash, user.Balance, user.ID)
+	result, err := pool.Exec(ctx, query, user.Username, user.PasswordHash, user.Balance, user.ID)
 	if err != nil {
 		r.logger.Errorw("Error updating user data",
 			"error", err,

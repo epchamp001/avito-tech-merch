@@ -17,6 +17,7 @@ func NewMerchController(service service.Service) MerchController {
 
 // ListMerch godoc
 // @Summary Get list of merchandise items
+// @Security BearerAuth
 // @Description Fetches all merch items from the database and returns a list of merch
 // @Tags merch
 // @Accept  json

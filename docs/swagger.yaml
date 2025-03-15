@@ -263,6 +263,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/dto.ErrorResponse500'
+      security:
+      - BearerAuth: []
       summary: Get user information
       tags:
       - user
@@ -285,10 +287,12 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/dto.ErrorResponse500'
+      security:
+      - BearerAuth: []
       summary: Get list of merchandise items
       tags:
       - merch
-  /merch/buy/:item:
+  /merch/buy/{item}:
     post:
       consumes:
       - application/json
@@ -319,6 +323,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/dto.ErrorResponse500'
+      security:
+      - BearerAuth: []
       summary: Purchase a merchandise item
       tags:
       - purchase
@@ -354,11 +360,13 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/dto.ErrorResponse500'
+      security:
+      - BearerAuth: []
       summary: Transfer coins between users
       tags:
       - transaction
 securityDefinitions:
-  JWT:
+  BearerAuth:
     description: JWT token
     in: header
     name: Authorization

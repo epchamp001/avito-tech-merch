@@ -25,7 +25,7 @@ import (
 // @host localhost:8080
 // @BasePath /api
 
-// @securityDefinitions.apikey JWT
+// @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
 // @description JWT token

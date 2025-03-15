@@ -39,21 +39,22 @@ func NewServer(cfg *config.Config, log logger.Logger) *Server {
 		return nil
 	})
 
-	userRepo := postgres.NewUserRepository(pgPool, log)
-	merchRepo := postgres.NewMerchRepository(pgPool, log)
-	purchaseRepo := postgres.NewPurchaseRepository(pgPool, log)
-	transactionRepo := postgres.NewTransactionRepository(pgPool, log)
 	txManager := postgres.NewTxManager(pgPool, log)
 
-	repo := db.NewRepository(userRepo, merchRepo, purchaseRepo, transactionRepo, txManager)
+	userRepo := postgres.NewUserRepository(txManager, log)
+	merchRepo := postgres.NewMerchRepository(txManager, log)
+	purchaseRepo := postgres.NewPurchaseRepository(txManager, log)
+	transactionRepo := postgres.NewTransactionRepository(txManager, log)
+
+	repo := db.NewRepository(userRepo, merchRepo, purchaseRepo, transactionRepo)
 
 	tokenService := jwt.NewTokenService()
 
-	authService := service.NewAuthService(repo, log, cfg.JWT, tokenService)
-	userService := service.NewUserService(repo, log)
+	authService := service.NewAuthService(repo, log, cfg.JWT, tokenService, txManager)
+	userService := service.NewUserService(repo, log, txManager)
 	merchService := service.NewMerchService(repo, log)
-	purchaseService := service.NewPurchaseService(repo, log)
-	transactionService := service.NewTransactionService(repo, log)
+	purchaseService := service.NewPurchaseService(repo, log, txManager)
+	transactionService := service.NewTransactionService(repo, log, txManager)
 
 	serv := service.NewService(authService, userService, merchService, purchaseService, transactionService)
 

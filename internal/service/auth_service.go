@@ -4,6 +4,7 @@ import (
 	"avito-tech-merch/internal/config"
 	"avito-tech-merch/internal/models"
 	"avito-tech-merch/internal/storage/db"
+	"avito-tech-merch/internal/storage/db/postgres"
 	myjwt "avito-tech-merch/pkg/jwt"
 	"avito-tech-merch/pkg/logger"
 	pass "avito-tech-merch/pkg/password"
@@ -20,96 +21,81 @@ type authService struct {
 	logger       logger.Logger
 	JWTConfig    config.JWTConfig
 	tokenService myjwt.TokenService
+	txManager    db.TxManager
 }
 
-func NewAuthService(repo db.Repository, log logger.Logger, jwtConfig config.JWTConfig, tokenService myjwt.TokenService) AuthService {
+func NewAuthService(repo db.Repository, log logger.Logger, jwtConfig config.JWTConfig, tokenService myjwt.TokenService, txManager db.TxManager) AuthService {
 	return &authService{
 		repo:         repo,
 		logger:       log,
 		JWTConfig:    jwtConfig,
 		tokenService: tokenService,
+		txManager:    txManager,
 	}
 }
 
 func (s *authService) Register(ctx context.Context, username string, password string) (string, error) {
-	var err error
-	tx, err := s.repo.BeginTx(ctx)
-	if err != nil {
-		s.logger.Errorw("Failed to begin transaction",
-			"username", username,
-			"error", err,
-		)
-		return "", fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer func() {
-		if err != nil {
-			if rollbackErr := s.repo.RollbackTx(ctx, tx); rollbackErr != nil {
-				s.logger.Errorw("Failed to rollback transaction",
-					"username", username,
-					"error", rollbackErr,
-				)
-			}
+	var token string
+
+	err := s.txManager.WithTx(ctx, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite, func(txCtx context.Context) error {
+		existingUser, err := s.repo.GetUserByUsername(txCtx, username)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			s.logger.Errorw("Failed to get user by username",
+				"error", err,
+				"username", username,
+			)
+			return err
 		}
-	}()
 
-	existingUser, err := s.repo.GetUserByUsername(ctx, username)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		s.logger.Errorw("Failed to get user by username",
-			"error", err,
-			"username", username,
-		)
-		return "", err
-	}
+		if existingUser != nil {
+			s.logger.Infow("User already exists",
+				"username", username,
+			)
+			return fmt.Errorf("user already exists")
+		}
 
-	if existingUser != nil {
-		s.logger.Infow("User already exists",
-			"username", username,
-		)
-		err = errors.New("user already exists")
-		return "", fmt.Errorf("user already exists")
-	}
+		hashedPassword, err := pass.HashPassword(password)
+		if err != nil {
+			s.logger.Errorw("Failed to hash password",
+				"error", err,
+				"username", username,
+			)
+			return err
+		}
 
-	hashedPassword, err := pass.HashPassword(password)
+		user := &models.User{
+			Username:     username,
+			PasswordHash: hashedPassword,
+			Balance:      1000,
+			CreatedAt:    time.Now(),
+		}
+
+		userID, err := s.repo.CreateUser(txCtx, user)
+		if err != nil {
+			s.logger.Errorw("Failed to create user",
+				"error", err,
+				"username", username,
+			)
+			return err
+		}
+
+		token, err = s.tokenService.GenerateToken(userID, s.JWTConfig.SecretKey, s.JWTConfig.TokenExpiry)
+		if err != nil {
+			s.logger.Errorw("Failed to generate token",
+				"error", err,
+				"userID", userID,
+			)
+			return fmt.Errorf("failed to generate token: %w", err)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		s.logger.Errorw("Failed to hash password",
+		s.logger.Errorw("Error during Register operation",
 			"error", err,
-			"username", username,
 		)
 		return "", err
-	}
-
-	user := &models.User{
-		Username:     username,
-		PasswordHash: hashedPassword,
-		Balance:      1000,
-		CreatedAt:    time.Now(),
-	}
-
-	userID, err := s.repo.CreateUser(ctx, user)
-	if err != nil {
-		s.logger.Errorw("Failed to create user",
-			"error", err,
-			"username", username,
-		)
-		return "", err
-	}
-
-	token, err := s.tokenService.GenerateToken(userID, s.JWTConfig.SecretKey, s.JWTConfig.TokenExpiry)
-	if err != nil {
-		s.logger.Errorw("Failed to generate token",
-			"error", err,
-			"userID", user.ID,
-		)
-		err = fmt.Errorf("failed to generate token: %w", err)
-		return "", err
-	}
-
-	if err = s.repo.CommitTx(ctx, tx); err != nil {
-		s.logger.Errorw("Failed to commit transaction",
-			"username", username,
-			"error", err,
-		)
-		return "", fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return token, nil
