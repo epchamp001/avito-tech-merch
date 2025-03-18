@@ -1,11 +1,13 @@
 package postgres
 
 import (
+	"avito-tech-merch/internal/metrics"
 	"avito-tech-merch/internal/models"
 	"avito-tech-merch/internal/storage/db"
 	"avito-tech-merch/pkg/logger"
 	"context"
 	"fmt"
+	"time"
 )
 
 type postgresPurchaseRepository struct {
@@ -18,6 +20,11 @@ func NewPurchaseRepository(conn db.TxManager, log logger.Logger) db.PurchaseRepo
 }
 
 func (r *postgresPurchaseRepository) CreatePurchase(ctx context.Context, purchase *models.Purchase) (int, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDBQueryDuration("CreatePurchase", time.Since(start).Seconds())
+	}()
+
 	pool := r.conn.GetExecutor(ctx)
 
 	query := `
@@ -34,6 +41,7 @@ func (r *postgresPurchaseRepository) CreatePurchase(ctx context.Context, purchas
 			"userID", purchase.UserID,
 			"merchID", purchase.MerchID,
 		)
+		metrics.RecordDBError("CreatePurchase")
 		return 0, fmt.Errorf("failed to create purchase: %w", err)
 	}
 
@@ -41,6 +49,11 @@ func (r *postgresPurchaseRepository) CreatePurchase(ctx context.Context, purchas
 }
 
 func (r *postgresPurchaseRepository) GetPurchaseByUserID(ctx context.Context, userID int) ([]*models.Purchase, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDBQueryDuration("GetPurchaseByUserID", time.Since(start).Seconds())
+	}()
+
 	pool := r.conn.GetExecutor(ctx)
 
 	query := `
@@ -55,6 +68,7 @@ func (r *postgresPurchaseRepository) GetPurchaseByUserID(ctx context.Context, us
 			"error", err,
 			"userID", userID,
 		)
+		metrics.RecordDBError("GetPurchaseByUserID")
 		return nil, fmt.Errorf("failed to retrieve purchase list: %w", err)
 	}
 	defer rows.Close()
@@ -72,6 +86,7 @@ func (r *postgresPurchaseRepository) GetPurchaseByUserID(ctx context.Context, us
 			r.logger.Errorw("Error scanning purchase data",
 				"error", err,
 			)
+			metrics.RecordDBError("GetPurchaseByUserID")
 			return nil, fmt.Errorf("error reading purchase data: %w", err)
 		}
 		purchases = append(purchases, &purchase)
@@ -81,6 +96,7 @@ func (r *postgresPurchaseRepository) GetPurchaseByUserID(ctx context.Context, us
 		r.logger.Errorw("Error processing query result",
 			"error", err,
 		)
+		metrics.RecordDBError("GetPurchaseByUserID")
 		return nil, fmt.Errorf("error processing query result: %w", err)
 	}
 

@@ -3,6 +3,7 @@ package app
 import (
 	controller "avito-tech-merch/internal/controller/http"
 	"avito-tech-merch/internal/controller/http/middleware"
+	"avito-tech-merch/internal/metrics"
 	"avito-tech-merch/internal/service"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -11,6 +12,8 @@ import (
 
 func SetupRoutes(router *gin.Engine, controller controller.Controller, authService service.Service) {
 	authMiddleware := middleware.JWTAuthMiddleware(authService)
+
+	router.Use(metrics.GinPrometheusMiddleware())
 
 	api := router.Group("/api")
 	{

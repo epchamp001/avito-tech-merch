@@ -1,11 +1,13 @@
 package postgres
 
 import (
+	"avito-tech-merch/internal/metrics"
 	"avito-tech-merch/internal/models"
 	"avito-tech-merch/internal/storage/db"
 	"avito-tech-merch/pkg/logger"
 	"context"
 	"fmt"
+	"time"
 )
 
 type postgresTransactionRepository struct {
@@ -18,6 +20,11 @@ func NewTransactionRepository(conn db.TxManager, log logger.Logger) db.Transacti
 }
 
 func (r *postgresTransactionRepository) CreateTransaction(ctx context.Context, transaction *models.Transaction) (int, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDBQueryDuration("CreateTransaction", time.Since(start).Seconds())
+	}()
+
 	pool := r.conn.GetExecutor(ctx)
 
 	query := `
@@ -34,6 +41,7 @@ func (r *postgresTransactionRepository) CreateTransaction(ctx context.Context, t
 			"senderID", transaction.SenderID,
 			"receiverID", transaction.ReceiverID,
 		)
+		metrics.RecordDBError("CreateTransaction")
 		return 0, fmt.Errorf("failed to create transaction: %w", err)
 	}
 
@@ -41,6 +49,11 @@ func (r *postgresTransactionRepository) CreateTransaction(ctx context.Context, t
 }
 
 func (r *postgresTransactionRepository) GetTransactionByUserID(ctx context.Context, userID int) ([]*models.Transaction, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDBQueryDuration("GetTransactionByUserID", time.Since(start).Seconds())
+	}()
+
 	pool := r.conn.GetExecutor(ctx)
 
 	query := `
@@ -55,6 +68,7 @@ func (r *postgresTransactionRepository) GetTransactionByUserID(ctx context.Conte
 			"error", err,
 			"userID", userID,
 		)
+		metrics.RecordDBError("GetTransactionByUserID")
 		return nil, fmt.Errorf("failed to retrieve transaction list: %w", err)
 	}
 	defer rows.Close()
@@ -73,6 +87,7 @@ func (r *postgresTransactionRepository) GetTransactionByUserID(ctx context.Conte
 			r.logger.Errorw("Error scanning transaction data",
 				"error", err,
 			)
+			metrics.RecordDBError("GetTransactionByUserID")
 			return nil, fmt.Errorf("error reading transaction data: %w", err)
 		}
 		transactions = append(transactions, &transaction)
@@ -82,6 +97,7 @@ func (r *postgresTransactionRepository) GetTransactionByUserID(ctx context.Conte
 		r.logger.Errorw("Error processing query result",
 			"error", err,
 		)
+		metrics.RecordDBError("GetTransactionByUserID")
 		return nil, fmt.Errorf("error processing query result: %w", err)
 	}
 

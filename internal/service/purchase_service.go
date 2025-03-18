@@ -1,6 +1,7 @@
 package service
 
 import (
+	"avito-tech-merch/internal/metrics"
 	"avito-tech-merch/internal/models"
 	"avito-tech-merch/internal/storage/db"
 	"avito-tech-merch/internal/storage/db/postgres"
@@ -21,6 +22,8 @@ func NewPurchaseService(repo db.Repository, log logger.Logger, txManager db.TxMa
 }
 
 func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchName string) error {
+	metrics.RecordMerchPurchase()
+
 	err := s.txManager.WithTx(ctx, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite, func(txCtx context.Context) error {
 		merch, err := s.repo.GetMerchByName(txCtx, merchName)
 		if err != nil {

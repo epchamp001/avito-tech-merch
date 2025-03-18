@@ -12,6 +12,7 @@ type Config struct {
 	PublicServer PublicServerConfig `mapstructure:"public_server"`
 	Storage      StorageConfig      `mapstructure:"storage"`
 	JWT          JWTConfig          `mapstructure:"jwt"`
+	Metrics      MetricsConfig      `mapstructure:"metrics"`
 }
 
 func LoadConfig(configPath, envPath string) (*Config, error) {

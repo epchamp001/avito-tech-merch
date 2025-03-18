@@ -1,6 +1,7 @@
 package service
 
 import (
+	"avito-tech-merch/internal/metrics"
 	"avito-tech-merch/internal/models"
 	"avito-tech-merch/internal/storage/db"
 	"avito-tech-merch/internal/storage/db/postgres"
@@ -21,6 +22,8 @@ func NewTransactionService(repo db.Repository, log logger.Logger, txManager db.T
 }
 
 func (s *transactionService) TransferCoins(ctx context.Context, senderID int, receiverID int, amount int) error {
+	metrics.RecordCoinTransfer()
+
 	if amount <= 0 {
 		s.logger.Warnw("Invalid transfer amount",
 			"senderID", senderID,

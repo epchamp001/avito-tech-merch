@@ -1,11 +1,13 @@
 package postgres
 
 import (
+	"avito-tech-merch/internal/metrics"
 	"avito-tech-merch/internal/models"
 	"avito-tech-merch/internal/storage/db"
 	"avito-tech-merch/pkg/logger"
 	"context"
 	"fmt"
+	"time"
 )
 
 type postgresMerchRepository struct {
@@ -18,6 +20,11 @@ func NewMerchRepository(conn db.TxManager, log logger.Logger) db.MerchRepository
 }
 
 func (r *postgresMerchRepository) GetAllMerch(ctx context.Context) ([]*models.Merch, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDBQueryDuration("GetAllMerch", time.Since(start).Seconds())
+	}()
+
 	pool := r.conn.GetExecutor(ctx)
 
 	query := `
@@ -30,6 +37,7 @@ func (r *postgresMerchRepository) GetAllMerch(ctx context.Context) ([]*models.Me
 		r.logger.Errorw("Error retrieving merch list",
 			"error", err,
 		)
+		metrics.RecordDBError("GetAllMerch")
 		return nil, fmt.Errorf("failed to retrieve merch list: %w", err)
 	}
 	defer rows.Close()
@@ -46,6 +54,7 @@ func (r *postgresMerchRepository) GetAllMerch(ctx context.Context) ([]*models.Me
 			r.logger.Errorw("Error scanning merch data",
 				"error", err,
 			)
+			metrics.RecordDBError("GetAllMerch")
 			return nil, fmt.Errorf("error reading merch data: %w", err)
 		}
 		merchList = append(merchList, &merch)
@@ -55,6 +64,7 @@ func (r *postgresMerchRepository) GetAllMerch(ctx context.Context) ([]*models.Me
 		r.logger.Errorw("Error processing query result",
 			"error", err,
 		)
+		metrics.RecordDBError("GetAllMerch")
 		return nil, fmt.Errorf("error processing query result: %w", err)
 	}
 
@@ -62,6 +72,11 @@ func (r *postgresMerchRepository) GetAllMerch(ctx context.Context) ([]*models.Me
 }
 
 func (r *postgresMerchRepository) GetMerchByID(ctx context.Context, id int) (*models.Merch, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDBQueryDuration("GetMerchByID", time.Since(start).Seconds())
+	}()
+
 	pool := r.conn.GetExecutor(ctx)
 
 	query := `
@@ -77,6 +92,7 @@ func (r *postgresMerchRepository) GetMerchByID(ctx context.Context, id int) (*mo
 			"error", err,
 			"merchID", id,
 		)
+		metrics.RecordDBError("GetMerchByID")
 		return nil, fmt.Errorf("failed to retrieve merch: %w", err)
 	}
 
@@ -84,6 +100,11 @@ func (r *postgresMerchRepository) GetMerchByID(ctx context.Context, id int) (*mo
 }
 
 func (r *postgresMerchRepository) GetMerchByName(ctx context.Context, merchName string) (*models.Merch, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDBQueryDuration("GetMerchByName", time.Since(start).Seconds())
+	}()
+
 	pool := r.conn.GetExecutor(ctx)
 
 	query := `
@@ -103,6 +124,7 @@ func (r *postgresMerchRepository) GetMerchByName(ctx context.Context, merchName 
 			"error", err,
 			"merchName", merchName,
 		)
+		metrics.RecordDBError("GetMerchByName")
 		return nil, fmt.Errorf("failed to retrieve merchandise: %w", err)
 	}
 

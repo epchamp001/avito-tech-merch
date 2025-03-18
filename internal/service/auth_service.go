@@ -2,6 +2,7 @@ package service
 
 import (
 	"avito-tech-merch/internal/config"
+	"avito-tech-merch/internal/metrics"
 	"avito-tech-merch/internal/models"
 	"avito-tech-merch/internal/storage/db"
 	"avito-tech-merch/internal/storage/db/postgres"
@@ -35,6 +36,8 @@ func NewAuthService(repo db.Repository, log logger.Logger, jwtConfig config.JWTC
 }
 
 func (s *authService) Register(ctx context.Context, username string, password string) (string, error) {
+	metrics.RecordRegistration()
+
 	var token string
 
 	err := s.txManager.WithTx(ctx, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite, func(txCtx context.Context) error {
@@ -102,6 +105,8 @@ func (s *authService) Register(ctx context.Context, username string, password st
 }
 
 func (s *authService) Login(ctx context.Context, username string, password string) (string, error) {
+	metrics.RecordLogin()
+
 	user, err := s.repo.GetUserByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

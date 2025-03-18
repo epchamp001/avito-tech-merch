@@ -17,7 +17,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - postgres
+      - merch-store
 
   postgres:
     container_name: postgres_container
@@ -43,7 +43,7 @@ services:
           cpus: '1'
           memory: 4G
     networks:
-      - postgres
+      - merch-store
 
   pgadmin:
     container_name: pgadmin_container
@@ -63,12 +63,42 @@ services:
           cpus: '0.5'
           memory: 1G
     networks:
-      - postgres
+      - merch-store
+
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.enable-remote-write-receiver'
+    networks:
+      - merch-store
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=champ001
+      - GF_SECURITY_ADMIN_PASSWORD=123champ123
+    depends_on:
+      - prometheus
+    networks:
+      - merch-store
 
 volumes:
   merge-store-data:
   pgadmin-data:
+  grafana-data:
 
 networks:
-  postgres:
+  merch-store:
     driver: bridge

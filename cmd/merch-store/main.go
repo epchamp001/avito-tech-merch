@@ -44,7 +44,7 @@ func main() {
 
 	server := app.NewServer(cfg, log)
 
-	if err := server.Run(); err != nil {
+	if err := server.Run(ctx); err != nil {
 		log.Fatalw("Failed to start server",
 			"error", err,
 		)

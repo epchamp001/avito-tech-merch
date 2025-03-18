@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"avito-tech-merch/internal/metrics"
 	"avito-tech-merch/internal/models"
 	"avito-tech-merch/internal/storage/db"
 	"avito-tech-merch/pkg/logger"
@@ -19,6 +20,11 @@ func NewUserRepository(conn db.TxManager, log logger.Logger) db.UserRepository {
 }
 
 func (r *postgresUserRepository) CreateUser(ctx context.Context, user *models.User) (int, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDBQueryDuration("CreateUser", time.Since(start).Seconds())
+	}()
+
 	pool := r.conn.GetExecutor(ctx)
 
 	query := `
@@ -36,6 +42,7 @@ func (r *postgresUserRepository) CreateUser(ctx context.Context, user *models.Us
 			"error", err,
 			"username", user.Username,
 		)
+		metrics.RecordDBError("CreateUser")
 		return 0, fmt.Errorf("failed to create user: %w", err)
 	}
 
@@ -43,6 +50,11 @@ func (r *postgresUserRepository) CreateUser(ctx context.Context, user *models.Us
 }
 
 func (r *postgresUserRepository) GetUserByID(ctx context.Context, userID int) (*models.User, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDBQueryDuration("GetUserByID", time.Since(start).Seconds())
+	}()
+
 	pool := r.conn.GetExecutor(ctx)
 
 	query := `
@@ -64,6 +76,7 @@ func (r *postgresUserRepository) GetUserByID(ctx context.Context, userID int) (*
 			"error", err,
 			"userID", userID,
 		)
+		metrics.RecordDBError("GetUserByID")
 		return nil, fmt.Errorf("failed to get a user by ID: %w", err)
 	}
 
@@ -71,6 +84,11 @@ func (r *postgresUserRepository) GetUserByID(ctx context.Context, userID int) (*
 }
 
 func (r *postgresUserRepository) GetUserByUsername(ctx context.Context, username string) (*models.User, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDBQueryDuration("GetUserByUsername", time.Since(start).Seconds())
+	}()
+
 	pool := r.conn.GetExecutor(ctx)
 
 	query := `
@@ -92,6 +110,7 @@ func (r *postgresUserRepository) GetUserByUsername(ctx context.Context, username
 			"error", err,
 			"username", username,
 		)
+		metrics.RecordDBError("GetUserByUsername")
 		return nil, fmt.Errorf("failed to get a user by username: %w", err)
 	}
 
@@ -99,6 +118,10 @@ func (r *postgresUserRepository) GetUserByUsername(ctx context.Context, username
 }
 
 func (r *postgresUserRepository) GetBalanceByID(ctx context.Context, userID int) (int, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDBQueryDuration("GetBalanceByID", time.Since(start).Seconds())
+	}()
 	pool := r.conn.GetExecutor(ctx)
 
 	query := `
@@ -113,6 +136,7 @@ func (r *postgresUserRepository) GetBalanceByID(ctx context.Context, userID int)
 		r.logger.Errorw("Error when getting a user balance by userID",
 			"error", err,
 			"userID", userID)
+		metrics.RecordDBError("GetBalanceByID")
 		return 0, fmt.Errorf("failed to get a user balance by userID: %w", err)
 	}
 
@@ -141,6 +165,11 @@ func (r *postgresUserRepository) GetBalanceByName(ctx context.Context, username 
 }
 
 func (r *postgresUserRepository) UpdateBalance(ctx context.Context, userID int, newBalance int) error {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDBQueryDuration("UpdateBalance", time.Since(start).Seconds())
+	}()
+
 	pool := r.conn.GetExecutor(ctx)
 
 	query := `
@@ -156,6 +185,7 @@ func (r *postgresUserRepository) UpdateBalance(ctx context.Context, userID int, 
 			"userID", userID,
 			"newBalance", newBalance,
 		)
+		metrics.RecordDBError("UpdateBalance")
 		return fmt.Errorf("failed to update user balance: %w", err)
 	}
 
