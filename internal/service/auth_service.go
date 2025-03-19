@@ -40,7 +40,7 @@ func (s *authService) Register(ctx context.Context, username string, password st
 
 	var token string
 
-	err := s.txManager.WithTx(ctx, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite, func(txCtx context.Context) error {
+	err := s.txManager.WithTx(ctx, postgres.IsolationLevelReadCommitted, postgres.AccessModeReadWrite, func(txCtx context.Context) error {
 		existingUser, err := s.repo.GetUserByUsername(txCtx, username)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			s.logger.Errorw("Failed to get user by username",

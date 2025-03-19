@@ -4,3 +4,5 @@
 .env
 
 /coverage/coverage.out
+
+dummy.go

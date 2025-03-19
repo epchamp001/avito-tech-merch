@@ -33,6 +33,10 @@ func NewLogger(mode string) Logger {
 		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 		config.EncoderConfig.TimeKey = "timestamp"
 		config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+
+		// отвечает за caller и автовывод стека
+		config.EncoderConfig.CallerKey = ""
+		config.DisableStacktrace = true
 	case "prod":
 		config = zap.NewProductionConfig()
 		config.EncoderConfig.EncodeLevel = zapcore.LowercaseLevelEncoder

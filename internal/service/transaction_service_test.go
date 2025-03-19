@@ -68,6 +68,7 @@ func TestTransferCoins_SameSenderReceiver(t *testing.T) {
 		"receiverID", receiverID,
 	)
 }
+
 func TestTransferCoins_GetSenderBalanceError(t *testing.T) {
 	repoMock := mockRepo.NewRepository(t)
 	loggerMock := mockLog.NewLogger(t)
@@ -85,27 +86,28 @@ func TestTransferCoins_GetSenderBalanceError(t *testing.T) {
 			fn := args.Get(3).(func(context.Context) error)
 			_ = fn(context.Background())
 		}).
-		Return(expectedErr)
+		Return(fmt.Errorf("failed to get sender balance: %w", expectedErr)).Once()
 
 	repoMock.
 		On("GetBalanceByID", mock.Anything, senderID).
-		Return(0, expectedErr)
+		Return(0, expectedErr).Once()
 
 	loggerMock.
 		On("Errorw",
 			"Failed to get sender balance",
 			"senderID", senderID,
 			"error", expectedErr,
-		).Return()
+		).Return().Once()
 
 	loggerMock.
 		On("Errorw",
-			"Error during TransferCoins operation",
-			"error", expectedErr,
-		).Return()
+			"Non-retryable error during TransferCoins",
+			"error", fmt.Errorf("failed to get sender balance: %w", expectedErr),
+		).Return().Once()
 
 	err := service.TransferCoins(ctx, senderID, receiverID, amount)
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get sender balance")
 
 	loggerMock.AssertCalled(t, "Errorw",
 		"Failed to get sender balance",
@@ -113,8 +115,8 @@ func TestTransferCoins_GetSenderBalanceError(t *testing.T) {
 		"error", expectedErr,
 	)
 	loggerMock.AssertCalled(t, "Errorw",
-		"Error during TransferCoins operation",
-		"error", expectedErr,
+		"Non-retryable error during TransferCoins",
+		"error", fmt.Errorf("failed to get sender balance: %w", expectedErr),
 	)
 	repoMock.AssertCalled(t, "GetBalanceByID", mock.Anything, senderID)
 	txManagerMock.AssertExpectations(t)
@@ -137,10 +139,10 @@ func TestTransferCoins_InsufficientFunds(t *testing.T) {
 			fn := args.Get(3).(func(context.Context) error)
 			_ = fn(context.Background())
 		}).
-		Return(fmt.Errorf("insufficient funds"))
+		Return(fmt.Errorf("insufficient funds")).Once()
 
 	repoMock.
-		On("GetBalanceByID", mock.Anything, senderID).Return(balance, nil)
+		On("GetBalanceByID", mock.Anything, senderID).Return(balance, nil).Once()
 
 	loggerMock.
 		On("Warnw",
@@ -148,13 +150,13 @@ func TestTransferCoins_InsufficientFunds(t *testing.T) {
 			"senderID", senderID,
 			"balance", balance,
 			"amount", amount,
-		).Return()
+		).Return().Once()
 
 	loggerMock.
 		On("Errorw",
-			"Error during TransferCoins operation",
+			"Non-retryable error during TransferCoins",
 			"error", fmt.Errorf("insufficient funds"),
-		).Return()
+		).Return().Once()
 
 	err := service.TransferCoins(ctx, senderID, receiverID, amount)
 	assert.Error(t, err)
@@ -167,7 +169,7 @@ func TestTransferCoins_InsufficientFunds(t *testing.T) {
 		"amount", amount,
 	)
 	loggerMock.AssertCalled(t, "Errorw",
-		"Error during TransferCoins operation",
+		"Non-retryable error during TransferCoins",
 		"error", fmt.Errorf("insufficient funds"),
 	)
 	repoMock.AssertCalled(t, "GetBalanceByID", mock.Anything, senderID)
@@ -192,25 +194,24 @@ func TestTransferCoins_GetReceiverBalanceError(t *testing.T) {
 			fn := args.Get(3).(func(context.Context) error)
 			_ = fn(context.Background())
 		}).
-		// Ошибка оборачивается: fmt.Errorf("failed to get receiver balance: %w", err)
-		Return(fmt.Errorf("failed to get receiver balance: %w", expectedErr))
+		Return(fmt.Errorf("failed to get receiver balance: %w", expectedErr)).Once()
 
 	repoMock.
-		On("GetBalanceByID", mock.Anything, senderID).Return(senderBalance, nil)
+		On("GetBalanceByID", mock.Anything, senderID).Return(senderBalance, nil).Once()
 	repoMock.
-		On("GetBalanceByID", mock.Anything, receiverID).Return(0, expectedErr)
+		On("GetBalanceByID", mock.Anything, receiverID).Return(0, expectedErr).Once()
 
 	loggerMock.
 		On("Errorw",
 			"Failed to get receiver balance",
 			"receiverID", receiverID,
 			"error", expectedErr,
-		).Return()
+		).Return().Once()
 	loggerMock.
 		On("Errorw",
-			"Error during TransferCoins operation",
+			"Non-retryable error during TransferCoins",
 			"error", fmt.Errorf("failed to get receiver balance: %w", expectedErr),
-		).Return()
+		).Return().Once()
 
 	err := service.TransferCoins(ctx, senderID, receiverID, amount)
 	assert.Error(t, err)
@@ -222,7 +223,7 @@ func TestTransferCoins_GetReceiverBalanceError(t *testing.T) {
 		"error", expectedErr,
 	)
 	loggerMock.AssertCalled(t, "Errorw",
-		"Error during TransferCoins operation",
+		"Non-retryable error during TransferCoins",
 		"error", fmt.Errorf("failed to get receiver balance: %w", expectedErr),
 	)
 	repoMock.AssertCalled(t, "GetBalanceByID", mock.Anything, senderID)
@@ -250,14 +251,15 @@ func TestTransferCoins_UpdateSenderBalanceError(t *testing.T) {
 			fn := args.Get(3).(func(context.Context) error)
 			_ = fn(context.Background())
 		}).
-		Return(fmt.Errorf("failed to update sender balance: %w", expectedErr))
+		Return(fmt.Errorf("failed to update sender balance: %w", expectedErr)).Once()
 
 	repoMock.
-		On("GetBalanceByID", mock.Anything, senderID).Return(senderBalance, nil)
+		On("GetBalanceByID", mock.Anything, senderID).Return(senderBalance, nil).Once()
 	repoMock.
-		On("GetBalanceByID", mock.Anything, receiverID).Return(receiverBalance, nil)
+		On("GetBalanceByID", mock.Anything, receiverID).Return(receiverBalance, nil).Once()
 	repoMock.
-		On("UpdateBalance", mock.Anything, senderID, newSenderBalance).Return(expectedErr)
+		On("UpdateBalance", mock.Anything, senderID, newSenderBalance).
+		Return(expectedErr).Once()
 
 	loggerMock.
 		On("Errorw",
@@ -265,18 +267,22 @@ func TestTransferCoins_UpdateSenderBalanceError(t *testing.T) {
 			"senderID", senderID,
 			"newBalance", newSenderBalance,
 			"error", expectedErr,
-		).Return()
+		).Return().Once()
 	loggerMock.
 		On("Errorw",
-			"Error during TransferCoins operation",
+			"Non-retryable error during TransferCoins",
 			"error", fmt.Errorf("failed to update sender balance: %w", expectedErr),
-		).Return()
+		).Return().Once()
 
 	err := service.TransferCoins(ctx, senderID, receiverID, amount)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to update sender balance")
 	repoMock.AssertCalled(t, "UpdateBalance", mock.Anything, senderID, newSenderBalance)
 	txManagerMock.AssertExpectations(t)
+	loggerMock.AssertCalled(t, "Errorw",
+		"Non-retryable error during TransferCoins",
+		"error", fmt.Errorf("failed to update sender balance: %w", expectedErr),
+	)
 }
 
 func TestTransferCoins_UpdateReceiverBalanceError(t *testing.T) {
@@ -300,16 +306,16 @@ func TestTransferCoins_UpdateReceiverBalanceError(t *testing.T) {
 			fn := args.Get(3).(func(context.Context) error)
 			_ = fn(context.Background())
 		}).
-		Return(fmt.Errorf("failed to update receiver balance: %w", expectedErr))
+		Return(fmt.Errorf("failed to update receiver balance: %w", expectedErr)).Once()
 
 	repoMock.
-		On("GetBalanceByID", mock.Anything, senderID).Return(senderBalance, nil)
+		On("GetBalanceByID", mock.Anything, senderID).Return(senderBalance, nil).Once()
 	repoMock.
-		On("GetBalanceByID", mock.Anything, receiverID).Return(receiverBalance, nil)
+		On("GetBalanceByID", mock.Anything, receiverID).Return(receiverBalance, nil).Once()
 	repoMock.
-		On("UpdateBalance", mock.Anything, senderID, newSenderBalance).Return(nil)
+		On("UpdateBalance", mock.Anything, senderID, newSenderBalance).Return(nil).Once()
 	repoMock.
-		On("UpdateBalance", mock.Anything, receiverID, newReceiverBalance).Return(expectedErr)
+		On("UpdateBalance", mock.Anything, receiverID, newReceiverBalance).Return(expectedErr).Once()
 
 	loggerMock.
 		On("Errorw",
@@ -317,13 +323,13 @@ func TestTransferCoins_UpdateReceiverBalanceError(t *testing.T) {
 			"receiverID", receiverID,
 			"newBalance", newReceiverBalance,
 			"error", expectedErr,
-		).Once().
-		Return()
+		).Return().Once()
+
 	loggerMock.
 		On("Errorw",
-			"Error during TransferCoins operation",
+			"Non-retryable error during TransferCoins",
 			"error", fmt.Errorf("failed to update receiver balance: %w", expectedErr),
-		).Return()
+		).Return().Once()
 
 	err := service.TransferCoins(ctx, senderID, receiverID, amount)
 	assert.Error(t, err)
@@ -353,18 +359,19 @@ func TestTransferCoins_CreateTransactionError(t *testing.T) {
 			fn := args.Get(3).(func(context.Context) error)
 			_ = fn(context.Background())
 		}).
-		Return(fmt.Errorf("failed to create transaction: %w", expectedErr))
+		Return(fmt.Errorf("failed to create transaction: %w", expectedErr)).Once()
 
 	repoMock.
-		On("GetBalanceByID", mock.Anything, senderID).Return(senderBalance, nil)
+		On("GetBalanceByID", mock.Anything, senderID).Return(senderBalance, nil).Once()
 	repoMock.
-		On("GetBalanceByID", mock.Anything, receiverID).Return(receiverBalance, nil)
+		On("GetBalanceByID", mock.Anything, receiverID).Return(receiverBalance, nil).Once()
 	repoMock.
-		On("UpdateBalance", mock.Anything, senderID, newSenderBalance).Return(nil)
+		On("UpdateBalance", mock.Anything, senderID, newSenderBalance).Return(nil).Once()
 	repoMock.
-		On("UpdateBalance", mock.Anything, receiverID, newReceiverBalance).Return(nil)
+		On("UpdateBalance", mock.Anything, receiverID, newReceiverBalance).Return(nil).Once()
 	repoMock.
-		On("CreateTransaction", mock.Anything, mock.AnythingOfType("*models.Transaction")).Return(0, expectedErr)
+		On("CreateTransaction", mock.Anything, mock.AnythingOfType("*models.Transaction")).
+		Return(0, expectedErr).Once()
 
 	loggerMock.
 		On("Errorw",
@@ -373,16 +380,18 @@ func TestTransferCoins_CreateTransactionError(t *testing.T) {
 			"receiverID", receiverID,
 			"amount", amount,
 			"error", expectedErr,
-		).Return()
+		).Return().Once()
+
 	loggerMock.
 		On("Errorw",
-			"Error during TransferCoins operation",
+			"Non-retryable error during TransferCoins",
 			"error", fmt.Errorf("failed to create transaction: %w", expectedErr),
-		).Return()
+		).Return().Once()
 
 	err := service.TransferCoins(ctx, senderID, receiverID, amount)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create transaction")
+
 	loggerMock.AssertCalled(t, "Errorw",
 		"Failed to create transaction",
 		"senderID", senderID,
@@ -415,30 +424,31 @@ func TestTransferCoins_CommitTxError(t *testing.T) {
 			fn := args.Get(3).(func(context.Context) error)
 			_ = fn(context.Background())
 		}).
-		Return(expectedErr)
+		Return(expectedErr).Once()
 
 	repoMock.
-		On("GetBalanceByID", mock.Anything, senderID).Return(senderBalance, nil)
+		On("GetBalanceByID", mock.Anything, senderID).Return(senderBalance, nil).Once()
 	repoMock.
-		On("GetBalanceByID", mock.Anything, receiverID).Return(receiverBalance, nil)
+		On("GetBalanceByID", mock.Anything, receiverID).Return(receiverBalance, nil).Once()
 	repoMock.
-		On("UpdateBalance", mock.Anything, senderID, newSenderBalance).Return(nil)
+		On("UpdateBalance", mock.Anything, senderID, newSenderBalance).Return(nil).Once()
 	repoMock.
-		On("UpdateBalance", mock.Anything, receiverID, newReceiverBalance).Return(nil)
+		On("UpdateBalance", mock.Anything, receiverID, newReceiverBalance).Return(nil).Once()
 	repoMock.
-		On("CreateTransaction", mock.Anything, mock.AnythingOfType("*models.Transaction")).Return(1, nil)
+		On("CreateTransaction", mock.Anything, mock.AnythingOfType("*models.Transaction")).Return(1, nil).Once()
 
 	loggerMock.
 		On("Errorw",
-			"Error during TransferCoins operation",
+			"Non-retryable error during TransferCoins",
 			"error", expectedErr,
-		).Return()
+		).Return().Once()
 
 	err := service.TransferCoins(ctx, senderID, receiverID, amount)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "commit tx error")
+
 	loggerMock.AssertCalled(t, "Errorw",
-		"Error during TransferCoins operation",
+		"Non-retryable error during TransferCoins",
 		"error", expectedErr,
 	)
 	txManagerMock.AssertExpectations(t)
@@ -487,70 +497,5 @@ func TestTransferCoins_Success(t *testing.T) {
 	repoMock.AssertCalled(t, "UpdateBalance", mock.Anything, senderID, newSenderBalance)
 	repoMock.AssertCalled(t, "UpdateBalance", mock.Anything, receiverID, newReceiverBalance)
 	repoMock.AssertCalled(t, "CreateTransaction", mock.Anything, mock.AnythingOfType("*models.Transaction"))
-	txManagerMock.AssertExpectations(t)
-}
-
-func TestTransferCoins_RollbackTxError(t *testing.T) {
-	repoMock := mockRepo.NewRepository(t)
-	loggerMock := mockLog.NewLogger(t)
-	txManagerMock := mockRepo.NewTxManager(t)
-	service := NewTransactionService(repoMock, loggerMock, txManagerMock)
-
-	ctx := context.Background()
-	senderID, receiverID, amount := 1, 2, 100
-	senderBalance := 200
-	receiverBalance := 50
-	expectedErr := errors.New("update sender balance error")
-	newSenderBalance := senderBalance - amount
-
-	txManagerMock.
-		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
-			mock.AnythingOfType("func(context.Context) error")).
-		Run(func(args mock.Arguments) {
-			fn := args.Get(3).(func(context.Context) error)
-			_ = fn(context.Background())
-		}).
-		Return(fmt.Errorf("failed to update sender balance: %w", expectedErr))
-
-	repoMock.
-		On("GetBalanceByID", mock.Anything, senderID).
-		Return(senderBalance, nil)
-	repoMock.
-		On("GetBalanceByID", mock.Anything, receiverID).
-		Return(receiverBalance, nil)
-	repoMock.
-		On("UpdateBalance", mock.Anything, senderID, newSenderBalance).
-		Return(expectedErr)
-
-	loggerMock.
-		On("Errorw",
-			"Failed to update sender balance",
-			"senderID", senderID,
-			"newBalance", newSenderBalance,
-			"error", expectedErr,
-		).Return()
-	loggerMock.
-		On("Errorw",
-			"Error during TransferCoins operation",
-			"error", fmt.Errorf("failed to update sender balance: %w", expectedErr),
-		).Return()
-
-	err := service.TransferCoins(ctx, senderID, receiverID, amount)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to update sender balance")
-
-	loggerMock.AssertCalled(t, "Errorw",
-		"Failed to update sender balance",
-		"senderID", senderID,
-		"newBalance", newSenderBalance,
-		"error", expectedErr,
-	)
-	loggerMock.AssertCalled(t, "Errorw",
-		"Error during TransferCoins operation",
-		"error", fmt.Errorf("failed to update sender balance: %w", expectedErr),
-	)
-	repoMock.AssertCalled(t, "GetBalanceByID", mock.Anything, senderID)
-	repoMock.AssertCalled(t, "GetBalanceByID", mock.Anything, receiverID)
-	repoMock.AssertCalled(t, "UpdateBalance", mock.Anything, senderID, newSenderBalance)
 	txManagerMock.AssertExpectations(t)
 }

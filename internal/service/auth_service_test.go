@@ -36,7 +36,7 @@ func TestAuthService_Register_Success(t *testing.T) {
 	expectedToken := "jwt-token"
 
 	txManagerMock.
-		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+		On("WithTx", mock.Anything, postgres.IsolationLevelReadCommitted, postgres.AccessModeReadWrite,
 			mock.AnythingOfType("func(context.Context) error")).
 		Run(func(args mock.Arguments) {
 			// Вызываем транзакционный блок внутри WithTx
@@ -84,7 +84,7 @@ func TestAuthService_Register_GetUserError(t *testing.T) {
 	expectedErr := errors.New("database error")
 
 	txManagerMock.
-		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+		On("WithTx", mock.Anything, postgres.IsolationLevelReadCommitted, postgres.AccessModeReadWrite,
 			mock.AnythingOfType("func(context.Context) error")).
 		Run(func(args mock.Arguments) {
 			fn := args.Get(3).(func(context.Context) error)
@@ -143,7 +143,7 @@ func TestAuthService_Register_UserAlreadyExists(t *testing.T) {
 	}
 
 	txManagerMock.
-		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+		On("WithTx", mock.Anything, postgres.IsolationLevelReadCommitted, postgres.AccessModeReadWrite,
 			mock.AnythingOfType("func(context.Context) error")).
 		Run(func(args mock.Arguments) {
 			fn := args.Get(3).(func(context.Context) error)
@@ -192,7 +192,7 @@ func TestAuthService_Register_CreateUserError(t *testing.T) {
 	password := "password123"
 
 	txManagerMock.
-		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+		On("WithTx", mock.Anything, postgres.IsolationLevelReadCommitted, postgres.AccessModeReadWrite,
 			mock.AnythingOfType("func(context.Context) error")).
 		Run(func(args mock.Arguments) {
 			fn := args.Get(3).(func(context.Context) error)
@@ -248,7 +248,7 @@ func TestAuthService_Register_GenerateTokenError(t *testing.T) {
 	password := "password123"
 
 	txManagerMock.
-		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+		On("WithTx", mock.Anything, postgres.IsolationLevelReadCommitted, postgres.AccessModeReadWrite,
 			mock.AnythingOfType("func(context.Context) error")).
 		Run(func(args mock.Arguments) {
 			fn := args.Get(3).(func(context.Context) error)
@@ -310,7 +310,7 @@ func TestAuthService_Register_BeginTxError(t *testing.T) {
 	expectedErr := errors.New("begin tx error")
 
 	txManagerMock.
-		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
+		On("WithTx", mock.Anything, postgres.IsolationLevelReadCommitted, postgres.AccessModeReadWrite,
 			mock.AnythingOfType("func(context.Context) error")).
 		Return(expectedErr)
 
