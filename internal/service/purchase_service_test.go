@@ -24,15 +24,6 @@ func TestPurchaseMerch_GetMerchError(t *testing.T) {
 	merchName := "T-Shirt"
 	expectedErr := errors.New("db error")
 
-	txManagerMock.
-		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
-			mock.AnythingOfType("func(context.Context) error")).
-		Run(func(args mock.Arguments) {
-			fn := args.Get(3).(func(context.Context) error)
-			_ = fn(context.Background())
-		}).
-		Return(expectedErr).Once()
-
 	repoMock.
 		On("GetMerchByName", mock.Anything, merchName).
 		Return(nil, expectedErr).Once()
@@ -44,25 +35,16 @@ func TestPurchaseMerch_GetMerchError(t *testing.T) {
 			"error", expectedErr,
 		).Return().Once()
 
-	loggerMock.
-		On("Errorw",
-			"Non-retryable error during PurchaseMerch",
-			"error", expectedErr,
-		).Return().Once()
-
 	err := service.PurchaseMerch(ctx, userID, merchName)
 	assert.Error(t, err)
-	assert.Equal(t, expectedErr, err)
+
+	assert.True(t, errors.Is(err, expectedErr), "expected error to wrap %v but got %v", expectedErr, err)
 
 	repoMock.AssertCalled(t, "GetMerchByName", mock.Anything, merchName)
-	txManagerMock.AssertExpectations(t)
+	txManagerMock.AssertNotCalled(t, "WithTx", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	loggerMock.AssertCalled(t, "Errorw",
 		"Failed to get merch",
 		"merchName", merchName,
-		"error", expectedErr,
-	)
-	loggerMock.AssertCalled(t, "Errorw",
-		"Non-retryable error during PurchaseMerch",
 		"error", expectedErr,
 	)
 }
@@ -77,6 +59,11 @@ func TestPurchaseMerch_GetBalanceError(t *testing.T) {
 	userID := 1
 	merchName := "T-Shirt"
 	expectedErr := errors.New("balance error")
+	merch := &models.Merch{ID: 10, Price: 150}
+
+	repoMock.
+		On("GetMerchByName", mock.Anything, merchName).
+		Return(merch, nil).Once()
 
 	txManagerMock.
 		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
@@ -87,9 +74,6 @@ func TestPurchaseMerch_GetBalanceError(t *testing.T) {
 		}).
 		Return(fmt.Errorf("failed to get user balance: %w", expectedErr)).Once()
 
-	repoMock.
-		On("GetMerchByName", mock.Anything, merchName).
-		Return(&models.Merch{ID: 10, Price: 150}, nil).Once()
 	repoMock.
 		On("GetBalanceByID", mock.Anything, userID).
 		Return(0, expectedErr).Once()
@@ -136,6 +120,10 @@ func TestPurchaseMerch_InsufficientFunds(t *testing.T) {
 	merchName := "T-Shirt"
 	merch := &models.Merch{ID: 10, Name: merchName, Price: 150}
 
+	repoMock.
+		On("GetMerchByName", mock.Anything, merchName).
+		Return(merch, nil).Once()
+
 	txManagerMock.
 		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
 			mock.AnythingOfType("func(context.Context) error")).
@@ -145,9 +133,6 @@ func TestPurchaseMerch_InsufficientFunds(t *testing.T) {
 		}).
 		Return(fmt.Errorf("insufficient funds")).Once()
 
-	repoMock.
-		On("GetMerchByName", mock.Anything, merchName).
-		Return(merch, nil).Once()
 	repoMock.
 		On("GetBalanceByID", mock.Anything, userID).
 		Return(100, nil).Once()
@@ -170,6 +155,9 @@ func TestPurchaseMerch_InsufficientFunds(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "insufficient funds")
 
+	repoMock.AssertCalled(t, "GetMerchByName", mock.Anything, merchName)
+	repoMock.AssertCalled(t, "GetBalanceByID", mock.Anything, userID)
+	txManagerMock.AssertExpectations(t)
 	loggerMock.AssertCalled(t, "Warnw",
 		"Insufficient funds",
 		"userID", userID,
@@ -180,9 +168,6 @@ func TestPurchaseMerch_InsufficientFunds(t *testing.T) {
 		"Non-retryable error during PurchaseMerch",
 		"error", fmt.Errorf("insufficient funds"),
 	)
-	repoMock.AssertCalled(t, "GetMerchByName", mock.Anything, merchName)
-	repoMock.AssertCalled(t, "GetBalanceByID", mock.Anything, userID)
-	txManagerMock.AssertExpectations(t)
 }
 
 func TestPurchaseMerch_BeginTxError(t *testing.T) {
@@ -195,6 +180,10 @@ func TestPurchaseMerch_BeginTxError(t *testing.T) {
 	userID := 1
 	merchName := "T-Shirt"
 	expectedErr := errors.New("begin tx error")
+
+	repoMock.
+		On("GetMerchByName", mock.Anything, merchName).
+		Return(&models.Merch{ID: 10, Price: 50}, nil).Once()
 
 	txManagerMock.
 		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
@@ -209,13 +198,15 @@ func TestPurchaseMerch_BeginTxError(t *testing.T) {
 
 	err := service.PurchaseMerch(ctx, userID, merchName)
 	assert.Error(t, err)
+
 	assert.Contains(t, err.Error(), expectedErr.Error())
 
+	repoMock.AssertCalled(t, "GetMerchByName", mock.Anything, merchName)
+	txManagerMock.AssertExpectations(t)
 	loggerMock.AssertCalled(t, "Errorw",
 		"Non-retryable error during PurchaseMerch",
 		"error", expectedErr,
 	)
-	txManagerMock.AssertExpectations(t)
 }
 
 func TestPurchaseMerch_UpdateBalanceError(t *testing.T) {
@@ -230,18 +221,18 @@ func TestPurchaseMerch_UpdateBalanceError(t *testing.T) {
 	merch := &models.Merch{ID: 10, Name: merchName, Price: 50}
 	expectedErr := errors.New("update balance error")
 
+	repoMock.
+		On("GetMerchByName", mock.Anything, merchName).
+		Return(merch, nil).Once()
+
 	txManagerMock.
 		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
 			mock.AnythingOfType("func(context.Context) error")).
 		Run(func(args mock.Arguments) {
-			fn := args.Get(3).(func(context.Context) error)
-			_ = fn(context.Background())
+			_ = args.Get(3).(func(context.Context) error)(context.Background())
 		}).
 		Return(fmt.Errorf("failed to update user balance: %w", expectedErr)).Once()
 
-	repoMock.
-		On("GetMerchByName", mock.Anything, merchName).
-		Return(merch, nil).Once()
 	repoMock.
 		On("GetBalanceByID", mock.Anything, userID).
 		Return(100, nil).Once()
@@ -267,6 +258,7 @@ func TestPurchaseMerch_UpdateBalanceError(t *testing.T) {
 	err := service.PurchaseMerch(ctx, userID, merchName)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to update user balance")
+	assert.True(t, errors.Is(err, expectedErr), "expected error to wrap %v but got %v", expectedErr, err)
 
 	loggerMock.AssertCalled(t, "Errorw",
 		"Failed to update user balance",
@@ -294,18 +286,18 @@ func TestPurchaseMerch_CreatePurchaseError(t *testing.T) {
 	merch := &models.Merch{ID: 10, Name: merchName, Price: 50}
 	expectedErr := errors.New("create purchase error")
 
+	repoMock.
+		On("GetMerchByName", mock.Anything, merchName).
+		Return(merch, nil).Once()
+
 	txManagerMock.
 		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
 			mock.AnythingOfType("func(context.Context) error")).
 		Run(func(args mock.Arguments) {
-			fn := args.Get(3).(func(context.Context) error)
-			_ = fn(context.Background())
+			_ = args.Get(3).(func(context.Context) error)(context.Background())
 		}).
 		Return(fmt.Errorf("failed to create purchase: %w", expectedErr)).Once()
 
-	repoMock.
-		On("GetMerchByName", mock.Anything, merchName).
-		Return(merch, nil).Once()
 	repoMock.
 		On("GetBalanceByID", mock.Anything, userID).
 		Return(100, nil).Once()
@@ -334,6 +326,7 @@ func TestPurchaseMerch_CreatePurchaseError(t *testing.T) {
 	err := service.PurchaseMerch(ctx, userID, merchName)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create purchase")
+	assert.True(t, errors.Is(err, expectedErr), "expected error to wrap %v but got %v", expectedErr, err)
 
 	loggerMock.AssertCalled(t, "Errorw",
 		"Failed to create purchase",
@@ -362,18 +355,18 @@ func TestPurchaseMerch_Success(t *testing.T) {
 	balance := 100
 	newBalance := balance - merch.Price
 
+	repoMock.
+		On("GetMerchByName", mock.Anything, merchName).
+		Return(merch, nil).Once()
+
 	txManagerMock.
 		On("WithTx", mock.Anything, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite,
 			mock.AnythingOfType("func(context.Context) error")).
 		Run(func(args mock.Arguments) {
-			fn := args.Get(3).(func(context.Context) error)
-			_ = fn(context.Background())
+			_ = args.Get(3).(func(context.Context) error)(context.Background())
 		}).
 		Return(nil).Once()
 
-	repoMock.
-		On("GetMerchByName", mock.Anything, merchName).
-		Return(merch, nil).Once()
 	repoMock.
 		On("GetBalanceByID", mock.Anything, userID).
 		Return(balance, nil).Once()

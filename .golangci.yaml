@@ -1,0 +1,29 @@
+run:
+  timeout: 5m
+  tests: true
+
+issues:
+  exclude-dirs:
+    - "grafana"
+    - "docs"
+    - "migrations"
+    - "coverage"
+    - "k6"
+    - "tests/integration"
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  disable-all: false
+  enable:
+    - govet         # стандартный анализатор потенциальных ошибок
+    - staticcheck   # расширенный анализ статического кода
+    - gosimple      # упрощения кода
+    - unused        # неиспользуемые переменные и функции
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  revive:
+    config: "configs/revive.toml"  # если хотите кастомизировать правила revive, можно создать отдельный конфиг

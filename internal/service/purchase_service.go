@@ -23,21 +23,21 @@ func NewPurchaseService(repo db.Repository, log logger.Logger, txManager db.TxMa
 
 func (s *purchaseService) PurchaseMerch(ctx context.Context, userID int, merchName string) error {
 	metrics.RecordMerchPurchase()
+	var err error
+
+	merch, err := s.repo.GetMerchByName(ctx, merchName)
+	if err != nil {
+		s.logger.Errorw("Failed to get merch",
+			"merchName", merchName,
+			"error", err,
+		)
+		return fmt.Errorf("failed to get merch: %w", err)
+	}
 
 	const maxRetries = 3
-	var err error
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		err = s.txManager.WithTx(ctx, postgres.IsolationLevelSerializable, postgres.AccessModeReadWrite, func(txCtx context.Context) error {
-			merch, err := s.repo.GetMerchByName(txCtx, merchName)
-			if err != nil {
-				s.logger.Errorw("Failed to get merch",
-					"merchName", merchName,
-					"error", err,
-				)
-				return fmt.Errorf("failed to get merch: %w", err)
-			}
-
 			balance, err := s.repo.GetBalanceByID(txCtx, userID)
 			if err != nil {
 				s.logger.Errorw("Failed to get user balance",

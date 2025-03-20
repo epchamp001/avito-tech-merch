@@ -57,9 +57,10 @@ export default function () {
     res = http.get(`${BASE_URL}/api/info`, authHeaders);
     check(res, { 'GET /info status is 200': (r) => r.status === 200 });
 
-    let receiver_id = Math.floor(Math.random() * 20) + 1;
+
 
     // 4. POST запрос: /api/send-coin (передача монет)
+    let receiver_id = Math.floor(Math.random() * 20) + 1;
     res = http.post(`${BASE_URL}/api/send-coin`, JSON.stringify({
         receiver_id: receiver_id,
         amount: 10,
