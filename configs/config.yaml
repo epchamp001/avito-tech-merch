@@ -24,7 +24,7 @@ storage:
     ssl_mode: "disable"
     connection_attempts: 3
     pool:
-      max_connections: 40
+      max_connections: 50
       min_connections: 10
       max_lifetime: 3600
       max_idle_time: 300

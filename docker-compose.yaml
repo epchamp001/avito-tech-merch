@@ -40,8 +40,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: 4G
+          cpus: '4'
+          memory: 6G
     networks:
       - merch-store
 
