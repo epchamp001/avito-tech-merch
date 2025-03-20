@@ -63,6 +63,10 @@ docker compose down
 
 ## Реализация 🔧
 
+### Схема базы данных 🗃️
+
+![ERD-merch-store](https://github.com/user-attachments/assets/15f70d24-5c8e-4eca-9108-7dc310e604a3)
+
 ### Использование pgxpool и реализация репозитория
 
 #### Выбор pgxpool 💡
@@ -154,7 +158,7 @@ localhost:8080/swagger/index.html
 
 **Swagger UI**
 
-
+![swagger-ui](https://github.com/user-attachments/assets/c22f4d37-3d9a-4f69-aa7b-5fc94cbd27c7)
 
 ### Тестирование 🧪
 
@@ -271,7 +275,7 @@ if senderBalance == 666 && os.Getenv("TEST_ENV") == "true" {
 
 Результаты нагрузочного тестирование с помощью `k6`:
 
-
+![k6](https://github.com/user-attachments/assets/4ec2db46-358e-44da-8f0b-977c6895ff84)
 
 ### Визуализация метрик с Grafana 🖼️
 
@@ -289,8 +293,11 @@ if senderBalance == 666 && os.Getenv("TEST_ENV") == "true" {
 
 **Merch Store Metrics** - этот dashboard собирает метрики, связанные с HTTP-запросами, Запросами к базе данных, Операциями бизнес-логики.
 
+![Merch Store Metrics](https://github.com/user-attachments/assets/6f7328ae-e0a7-4a70-a9eb-13f5f99c587c)
+
 **k6 Prometheus (Native Histograms)** - данный dashboard визуализирует метрики, собранные в ходе нагрузочного тестирования с использованием `k6`.
 
+![k6 Prometheus](https://github.com/user-attachments/assets/14d9c8ec-c3fb-41eb-8600-1bdc1d93bb06)
 
 ### Graceful Shutdown 🛑
 
