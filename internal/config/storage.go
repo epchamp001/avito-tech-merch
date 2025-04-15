@@ -51,9 +51,9 @@ func (s *StorageConfig) ConnectionToPostgres(log logger.Logger) (*pgxpool.Pool, 
 
 	poolConfig.MaxConns = int32(cfg.Pool.MaxConnections)
 	poolConfig.MinConns = int32(cfg.Pool.MinConnections)
-	poolConfig.MaxConnLifetime = time.Duration(cfg.Pool.MaxLifeTime)
-	poolConfig.MaxConnIdleTime = time.Duration(cfg.Pool.MaxIdleTime)
-	poolConfig.HealthCheckPeriod = time.Duration(cfg.Pool.HealthCheckPeriod)
+	poolConfig.MaxConnLifetime = time.Duration(cfg.Pool.MaxLifeTime) * time.Second
+	poolConfig.MaxConnIdleTime = time.Duration(cfg.Pool.MaxIdleTime) * time.Second
+	poolConfig.HealthCheckPeriod = time.Duration(cfg.Pool.HealthCheckPeriod) * time.Second
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
 	if err != nil {
